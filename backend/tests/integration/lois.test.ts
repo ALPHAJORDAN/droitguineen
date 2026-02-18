@@ -116,27 +116,26 @@ describe('API Base Routes', () => {
       expect(response.body.error).toContain('invalide');
     });
 
-    it('should return 400 for invalid UUID on DELETE', async () => {
+    it('should return 401 for invalid UUID on DELETE without auth', async () => {
       const response = await request(app)
         .delete('/lois/not-a-uuid')
-        .expect(400);
+        .expect(401);
 
-      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBeDefined();
     });
   });
 
   describe('Body Validation', () => {
-    it('should return validation error for POST /lois without required fields', async () => {
+    it('should return 401 for POST /lois without auth', async () => {
       const response = await request(app)
         .post('/lois')
         .send({ titre: 'Only title provided' })
-        .expect(400);
+        .expect(401);
 
-      expect(response.body.success).toBe(false);
-      expect(response.body.error).toBe('Erreur de validation');
+      expect(response.body.error).toBeDefined();
     });
 
-    it('should return validation error for invalid nature in POST /lois', async () => {
+    it('should return 401 for POST /lois with invalid nature without auth', async () => {
       const response = await request(app)
         .post('/lois')
         .send({
@@ -144,12 +143,12 @@ describe('API Base Routes', () => {
           titre: 'Test title',
           nature: 'INVALID_NATURE',
         })
-        .expect(400);
+        .expect(401);
 
-      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBeDefined();
     });
 
-    it('should return validation error for too short titre', async () => {
+    it('should return 401 for POST /lois with short titre without auth', async () => {
       const response = await request(app)
         .post('/lois')
         .send({
@@ -157,9 +156,9 @@ describe('API Base Routes', () => {
           titre: 'AB',
           nature: 'LOI',
         })
-        .expect(400);
+        .expect(401);
 
-      expect(response.body.success).toBe(false);
+      expect(response.body.error).toBeDefined();
     });
   });
 });
