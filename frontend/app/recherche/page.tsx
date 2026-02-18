@@ -7,12 +7,14 @@ import { Button } from "@/components/ui/Button";
 import Link from "next/link";
 import {
     FileText, Filter, Loader2, AlertCircle, Calendar, ArrowRight,
-    Scale, BookOpen, Gavel, FileCheck, ScrollText, X
+    Scale, BookOpen, Gavel, FileCheck, ScrollText, X,
+    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+    ArrowUpDown, SlidersHorizontal,
 } from "lucide-react";
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSearch, useLois } from "@/lib/hooks";
-import { NATURE_LABELS, Texte } from "@/lib/api";
+import { NATURE_LABELS, ETAT_LABELS, Texte } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 // Map frontend type filters to backend nature values
@@ -21,13 +23,13 @@ const TYPE_TO_NATURE: Record<string, string> = {
     "Lois": "LOI",
     "Lois organiques": "LOI_ORGANIQUE",
     "Ordonnances": "ORDONNANCE",
-    "Décrets": "DECRET",
-    "Décrets-lois": "DECRET_LOI",
-    "Arrêtés": "ARRETE",
+    "Decrets": "DECRET",
+    "Decrets-lois": "DECRET_LOI",
+    "Arretes": "ARRETE",
     "Circulaires": "CIRCULAIRE",
-    "Décisions": "DECISION",
+    "Decisions": "DECISION",
     "Conventions": "CONVENTION",
-    "Traités": "TRAITE",
+    "Traites": "TRAITE",
     "Codes": "CODE",
     "Jurisprudence": "JURISPRUDENCE",
 };
@@ -48,50 +50,88 @@ const NATURE_ICONS: Record<string, React.ReactNode> = {
     JURISPRUDENCE: <Gavel className="h-5 w-5" />,
 };
 
+const ETAT_STYLES: Record<string, string> = {
+    VIGUEUR: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+    VIGUEUR_DIFF: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
+    MODIFIE: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
+    ABROGE: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
+    ABROGE_DIFF: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
+    PERIME: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400",
+};
+
 // Filter categories for the sidebar
 const FILTER_GROUPS = [
     {
-        label: "Textes législatifs",
+        label: "Textes legislatifs",
         types: ["Constitution", "Lois", "Lois organiques", "Ordonnances"],
     },
     {
-        label: "Textes réglementaires",
-        types: ["Décrets", "Arrêtés", "Circulaires", "Décisions"],
+        label: "Textes reglementaires",
+        types: ["Decrets", "Arretes", "Circulaires", "Decisions"],
     },
     {
         label: "Autres",
-        types: ["Codes", "Jurisprudence", "Traités", "Conventions"],
+        types: ["Codes", "Jurisprudence", "Traites", "Conventions"],
     },
 ];
 
-function SearchResults() {
+const SORT_OPTIONS = [
+    { value: "datePublication:desc", label: "Plus recents" },
+    { value: "datePublication:asc", label: "Plus anciens" },
+    { value: "titre:asc", label: "Titre A-Z" },
+    { value: "titre:desc", label: "Titre Z-A" },
+];
+
+function useSearchFilters() {
     const searchParams = useSearchParams();
-    const typeFilter = searchParams.get("type");
-    const queryFilter = searchParams.get("query") || searchParams.get("q") || "";
-    const page = parseInt(searchParams.get("page") || "1", 10);
+    return {
+        query: searchParams.get("q") || searchParams.get("query") || "",
+        type: searchParams.get("type"),
+        etat: searchParams.get("etat"),
+        dateDebut: searchParams.get("dateDebut"),
+        dateFin: searchParams.get("dateFin"),
+        sort: searchParams.get("sort") || "datePublication",
+        order: (searchParams.get("order") || "desc") as "asc" | "desc",
+        page: parseInt(searchParams.get("page") || "1", 10),
+    };
+}
 
-    // Convert frontend type to backend nature
-    const nature = typeFilter ? TYPE_TO_NATURE[typeFilter] : undefined;
+function buildParams(filters: Record<string, string | null | undefined>): URLSearchParams {
+    const params = new URLSearchParams();
+    for (const [key, value] of Object.entries(filters)) {
+        if (value) params.set(key, value);
+    }
+    return params;
+}
 
-    // Use search if there's a query, otherwise use list
-    const searchQuery = useSearch(queryFilter, {
+function SearchResults() {
+    const filters = useSearchFilters();
+    const nature = filters.type ? TYPE_TO_NATURE[filters.type] : undefined;
+
+    const searchQuery = useSearch(filters.query, {
         nature,
-        page,
+        etat: filters.etat || undefined,
+        dateDebut: filters.dateDebut || undefined,
+        dateFin: filters.dateFin || undefined,
+        page: filters.page,
         limit: 20,
     });
 
     const listQuery = useLois({
         nature,
-        page,
+        etat: filters.etat || undefined,
+        sort: filters.sort,
+        order: filters.order,
+        dateDebut: filters.dateDebut || undefined,
+        dateFin: filters.dateFin || undefined,
+        page: filters.page,
         limit: 20,
     });
 
-    // Use search results if there's a query, otherwise use list
-    const isSearching = queryFilter.length > 0;
+    const isSearching = filters.query.length > 0;
     const query = isSearching ? searchQuery : listQuery;
     const { isLoading, isError, error } = query;
 
-    // Get the results based on which query we're using
     const results: Texte[] = isSearching
         ? (searchQuery.data?.hits || [])
         : (listQuery.data?.data || []);
@@ -129,7 +169,7 @@ function SearchResults() {
                 <div>
                     <p className="font-medium text-destructive">Erreur lors de la recherche</p>
                     <p className="text-sm text-muted-foreground">
-                        {error instanceof Error ? error.message : "Veuillez réessayer plus tard."}
+                        {error instanceof Error ? error.message : "Veuillez reessayer plus tard."}
                     </p>
                 </div>
             </div>
@@ -140,25 +180,33 @@ function SearchResults() {
         return (
             <div className="text-center py-12">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">Aucun résultat trouvé</p>
+                <p className="text-lg font-medium">Aucun resultat trouve</p>
                 <p className="text-muted-foreground mt-1">
-                    {queryFilter
-                        ? `Aucun texte ne correspond à "${queryFilter}"`
-                        : "Aucun texte disponible pour ces critères."}
+                    {filters.query
+                        ? `Aucun texte ne correspond a "${filters.query}"`
+                        : "Aucun texte disponible pour ces criteres."}
                 </p>
             </div>
         );
     }
 
+    const start = (filters.page - 1) * 20 + 1;
+    const end = Math.min(filters.page * 20, pagination?.total || 0);
+
     return (
         <div className="space-y-4">
             {pagination && (
-                <p className="text-sm text-muted-foreground">
-                    {pagination.total} résultat{pagination.total > 1 ? "s" : ""} trouvé{pagination.total > 1 ? "s" : ""}
-                    {isSearching && searchQuery.data?.processingTimeMs && (
-                        <span> ({searchQuery.data.processingTimeMs}ms)</span>
-                    )}
-                </p>
+                <div className="flex items-center justify-between">
+                    <p className="text-sm text-muted-foreground">
+                        {pagination.total} resultat{pagination.total > 1 ? "s" : ""}
+                        {pagination.total > 20 && (
+                            <span> &middot; Affichage {start}-{end}</span>
+                        )}
+                        {isSearching && searchQuery.data?.processingTimeMs && (
+                            <span> &middot; {searchQuery.data.processingTimeMs}ms</span>
+                        )}
+                    </p>
+                </div>
             )}
 
             {results.map((texte) => (
@@ -176,14 +224,14 @@ function SearchResults() {
                                 <span className="text-xs font-medium px-2 py-0.5 bg-muted rounded">
                                     {NATURE_LABELS[texte.nature] || texte.nature}
                                 </span>
-                                {texte.etat === "VIGUEUR" && (
-                                    <span className="text-xs font-medium px-2 py-0.5 bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded">
-                                        En vigueur
+                                {texte.etat && ETAT_LABELS[texte.etat] && (
+                                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${ETAT_STYLES[texte.etat] || ETAT_STYLES.VIGUEUR}`}>
+                                        {ETAT_LABELS[texte.etat]}
                                     </span>
                                 )}
-                                {texte.etat === "ABROGE" && (
-                                    <span className="text-xs font-medium px-2 py-0.5 bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded">
-                                        Abrogé
+                                {texte.sousCategorie && (
+                                    <span className="text-xs font-medium px-2 py-0.5 bg-muted/60 rounded">
+                                        {texte.sousCategorie}
                                     </span>
                                 )}
                                 {texte.datePublication && (
@@ -196,11 +244,14 @@ function SearchResults() {
                             <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-2">
                                 {texte.titre}
                             </h3>
-                            {texte.numero && (
-                                <p className="text-sm text-muted-foreground mt-1">
-                                    N° {texte.numero}
-                                </p>
-                            )}
+                            <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                                {texte.numero && (
+                                    <span>N&deg; {texte.numero}</span>
+                                )}
+                                {texte.signataires && (
+                                    <span className="truncate max-w-xs">{texte.signataires}</span>
+                                )}
+                            </div>
                         </div>
                         <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
                     </div>
@@ -213,7 +264,38 @@ function SearchResults() {
 function Pagination() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const currentPage = parseInt(searchParams.get("page") || "1", 10);
+    const filters = useSearchFilters();
+    const nature = filters.type ? TYPE_TO_NATURE[filters.type] : undefined;
+
+    const searchQuery = useSearch(filters.query, {
+        nature,
+        etat: filters.etat || undefined,
+        dateDebut: filters.dateDebut || undefined,
+        dateFin: filters.dateFin || undefined,
+        page: filters.page,
+        limit: 20,
+    });
+
+    const listQuery = useLois({
+        nature,
+        etat: filters.etat || undefined,
+        sort: filters.sort,
+        order: filters.order,
+        dateDebut: filters.dateDebut || undefined,
+        dateFin: filters.dateFin || undefined,
+        page: filters.page,
+        limit: 20,
+    });
+
+    const isSearching = filters.query.length > 0;
+    const pagination = isSearching
+        ? searchQuery.data?.pagination
+        : listQuery.data?.pagination;
+
+    const totalPages = pagination?.totalPages || 1;
+    const currentPage = filters.page;
+
+    if (totalPages <= 1) return null;
 
     const goToPage = (page: number) => {
         const params = new URLSearchParams(searchParams.toString());
@@ -222,21 +304,53 @@ function Pagination() {
     };
 
     return (
-        <div className="flex justify-center pt-8">
-            <div className="flex space-x-2">
+        <div className="flex items-center justify-between pt-6">
+            <p className="text-sm text-muted-foreground">
+                Page {currentPage} sur {totalPages}
+            </p>
+            <div className="flex gap-1">
                 <Button
-                    variant="outline"
+                    variant="ghost"
+                    size="sm"
+                    disabled={currentPage <= 1}
+                    onClick={() => goToPage(1)}
+                    title="Premiere page"
+                >
+                    <ChevronsLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                    variant="ghost"
                     size="sm"
                     disabled={currentPage <= 1}
                     onClick={() => goToPage(currentPage - 1)}
                 >
-                    Précédent
+                    <ChevronLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline ml-1">Precedent</span>
                 </Button>
-                <Button variant="outline" size="sm" className="bg-primary text-primary-foreground">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    className="bg-primary/10 text-primary"
+                >
                     {currentPage}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => goToPage(currentPage + 1)}>
-                    Suivant
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => goToPage(currentPage + 1)}
+                >
+                    <span className="hidden sm:inline mr-1">Suivant</span>
+                    <ChevronRight className="h-4 w-4" />
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => goToPage(totalPages)}
+                    title="Derniere page"
+                >
+                    <ChevronsRight className="h-4 w-4" />
                 </Button>
             </div>
         </div>
@@ -246,58 +360,68 @@ function Pagination() {
 function SearchFilters() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const currentType = searchParams.get("type");
-    const currentQuery = searchParams.get("q") || searchParams.get("query") || "";
+    const filters = useSearchFilters();
+    const [showMobileFilters, setShowMobileFilters] = useState(false);
 
-    const handleTypeChange = (type: string) => {
-        const params = new URLSearchParams();
-        if (currentQuery) params.set("q", currentQuery);
-        if (currentType === type) {
-            // Deselect
+    const hasAnyFilter = filters.type || filters.etat || filters.dateDebut || filters.dateFin;
+
+    const updateFilter = (key: string, value: string | null) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (value) {
+            params.set(key, value);
         } else {
-            params.set("type", type);
+            params.delete(key);
         }
+        params.delete("page"); // Reset page on filter change
         router.push(`/recherche?${params.toString()}`);
     };
 
     const resetFilters = () => {
-        if (currentQuery) {
-            router.push(`/recherche?q=${encodeURIComponent(currentQuery)}`);
-        } else {
-            router.push("/recherche");
-        }
+        const params = new URLSearchParams();
+        if (filters.query) params.set("q", filters.query);
+        router.push(`/recherche?${params.toString()}`);
     };
 
-    return (
-        <aside className="w-full md:w-64 flex-shrink-0 space-y-6">
-            <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <Filter className="h-5 w-5" />
-                    <h2 className="font-semibold text-lg">Filtres</h2>
-                </div>
-                {currentType && (
+    const filterContent = (
+        <div className="space-y-6">
+            {/* Active filters summary */}
+            {hasAnyFilter && (
+                <div className="flex flex-wrap gap-2">
+                    {filters.type && (
+                        <span className="text-xs font-medium px-3 py-1.5 bg-primary/10 text-primary rounded-full flex items-center gap-1.5">
+                            {filters.type}
+                            <button onClick={() => updateFilter("type", null)} className="hover:bg-primary/20 rounded-full p-0.5">
+                                <X className="h-3 w-3" />
+                            </button>
+                        </span>
+                    )}
+                    {filters.etat && (
+                        <span className="text-xs font-medium px-3 py-1.5 bg-primary/10 text-primary rounded-full flex items-center gap-1.5">
+                            {ETAT_LABELS[filters.etat] || filters.etat}
+                            <button onClick={() => updateFilter("etat", null)} className="hover:bg-primary/20 rounded-full p-0.5">
+                                <X className="h-3 w-3" />
+                            </button>
+                        </span>
+                    )}
+                    {(filters.dateDebut || filters.dateFin) && (
+                        <span className="text-xs font-medium px-3 py-1.5 bg-primary/10 text-primary rounded-full flex items-center gap-1.5">
+                            {filters.dateDebut || "..."} - {filters.dateFin || "..."}
+                            <button onClick={() => { updateFilter("dateDebut", null); updateFilter("dateFin", null); }} className="hover:bg-primary/20 rounded-full p-0.5">
+                                <X className="h-3 w-3" />
+                            </button>
+                        </span>
+                    )}
                     <button
                         onClick={resetFilters}
-                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors underline"
                     >
-                        Réinitialiser
+                        Tout effacer
                     </button>
-                )}
-            </div>
-
-            {/* Active filter badge */}
-            {currentType && (
-                <div className="flex items-center gap-2">
-                    <span className="text-xs font-medium px-3 py-1.5 bg-primary/10 text-primary rounded-full flex items-center gap-1.5">
-                        {currentType}
-                        <button onClick={resetFilters} className="hover:bg-primary/20 rounded-full p-0.5">
-                            <X className="h-3 w-3" />
-                        </button>
-                    </span>
                 </div>
             )}
 
-            <div className="space-y-5">
+            {/* Type filters */}
+            <div className="space-y-4">
                 {FILTER_GROUPS.map((group) => (
                     <div key={group.label}>
                         <h3 className="font-medium mb-2 text-xs uppercase tracking-wider text-muted-foreground">
@@ -313,10 +437,10 @@ function SearchFilters() {
                                         type="radio"
                                         name="type-filter"
                                         className="rounded-full border-gray-300 dark:border-gray-600 text-primary"
-                                        checked={currentType === type}
-                                        onChange={() => handleTypeChange(type)}
+                                        checked={filters.type === type}
+                                        onChange={() => updateFilter("type", filters.type === type ? null : type)}
                                     />
-                                    <span className={currentType === type ? "font-medium text-primary" : ""}>
+                                    <span className={filters.type === type ? "font-medium text-primary" : ""}>
                                         {type}
                                     </span>
                                 </label>
@@ -325,24 +449,163 @@ function SearchFilters() {
                     </div>
                 ))}
             </div>
-        </aside>
+
+            {/* Etat filter */}
+            <div>
+                <h3 className="font-medium mb-2 text-xs uppercase tracking-wider text-muted-foreground">
+                    Etat du texte
+                </h3>
+                <div className="space-y-1">
+                    {Object.entries(ETAT_LABELS).map(([value, label]) => (
+                        <label
+                            key={value}
+                            className="flex items-center gap-2 text-sm cursor-pointer py-1.5 px-2 rounded-lg hover:bg-accent/50 transition-colors"
+                        >
+                            <input
+                                type="radio"
+                                name="etat-filter"
+                                className="rounded-full border-gray-300 dark:border-gray-600 text-primary"
+                                checked={filters.etat === value}
+                                onChange={() => updateFilter("etat", filters.etat === value ? null : value)}
+                            />
+                            <span className={filters.etat === value ? "font-medium text-primary" : ""}>
+                                {label}
+                            </span>
+                        </label>
+                    ))}
+                </div>
+            </div>
+
+            {/* Date range */}
+            <div>
+                <h3 className="font-medium mb-2 text-xs uppercase tracking-wider text-muted-foreground">
+                    Periode de publication
+                </h3>
+                <div className="space-y-2">
+                    <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Du</label>
+                        <input
+                            type="date"
+                            className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                            value={filters.dateDebut || ""}
+                            onChange={(e) => updateFilter("dateDebut", e.target.value || null)}
+                        />
+                    </div>
+                    <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Au</label>
+                        <input
+                            type="date"
+                            className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                            value={filters.dateFin || ""}
+                            onChange={(e) => updateFilter("dateFin", e.target.value || null)}
+                        />
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
+    return (
+        <>
+            {/* Desktop sidebar */}
+            <aside className="hidden md:block w-64 flex-shrink-0">
+                <div className="sticky top-20 space-y-4">
+                    <div className="flex items-center gap-2">
+                        <Filter className="h-5 w-5" />
+                        <h2 className="font-semibold text-lg">Filtres</h2>
+                    </div>
+                    {filterContent}
+                </div>
+            </aside>
+
+            {/* Mobile filter button */}
+            <button
+                onClick={() => setShowMobileFilters(true)}
+                className="md:hidden fixed bottom-6 left-6 z-40 bg-primary text-primary-foreground rounded-full p-3 shadow-lg hover:opacity-90 transition-opacity"
+                aria-label="Filtres"
+            >
+                <SlidersHorizontal className="h-5 w-5" />
+            </button>
+
+            {/* Mobile filter sheet */}
+            {showMobileFilters && (
+                <div className="md:hidden fixed inset-0 z-50">
+                    <div className="absolute inset-0 bg-black/50" onClick={() => setShowMobileFilters(false)} />
+                    <div className="absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-200">
+                        <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
+                            <h2 className="font-semibold flex items-center gap-2">
+                                <Filter className="h-5 w-5" />
+                                Filtres
+                            </h2>
+                            <button onClick={() => setShowMobileFilters(false)} className="text-muted-foreground hover:text-foreground">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <div className="p-4 overflow-y-auto flex-1">
+                            {filterContent}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
+function SortSelector() {
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const filters = useSearchFilters();
+
+    // Don't show sort when using full-text search (Meilisearch sorts by relevance)
+    if (filters.query) return null;
+
+    const currentSort = `${filters.sort}:${filters.order}`;
+
+    const handleSort = (value: string) => {
+        const [sort, order] = value.split(":");
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("sort", sort);
+        params.set("order", order);
+        params.delete("page");
+        router.push(`/recherche?${params.toString()}`);
+    };
+
+    return (
+        <div className="flex items-center gap-2">
+            <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+            <select
+                value={currentSort}
+                onChange={(e) => handleSort(e.target.value)}
+                className="border rounded-lg px-3 py-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+                {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+            </select>
+        </div>
     );
 }
 
 function SearchHeader() {
-    const searchParams = useSearchParams();
-    const currentType = searchParams.get("type");
-    const currentQuery = searchParams.get("q") || searchParams.get("query") || "";
+    const filters = useSearchFilters();
 
     let title = "Recherche";
-    let subtitle = "Explorez les textes législatifs et réglementaires de la République de Guinée";
+    let subtitle = "Explorez les textes legislatifs et reglementaires de la Republique de Guinee";
 
-    if (currentType && !currentQuery) {
-        title = currentType;
-        subtitle = `Tous les textes de type « ${currentType} »`;
-    } else if (currentQuery) {
-        title = `Résultats pour « ${currentQuery} »`;
-        subtitle = currentType ? `Filtré par : ${currentType}` : "Recherche dans tous les textes";
+    if (filters.type && !filters.query) {
+        title = filters.type;
+        subtitle = `Tous les textes de type « ${filters.type} »`;
+    } else if (filters.query) {
+        title = `Resultats pour « ${filters.query} »`;
+        const parts: string[] = [];
+        if (filters.type) parts.push(filters.type);
+        if (filters.etat) parts.push(ETAT_LABELS[filters.etat] || filters.etat);
+        if (filters.dateDebut || filters.dateFin) {
+            parts.push(`${filters.dateDebut || "..."} - ${filters.dateFin || "..."}`);
+        }
+        subtitle = parts.length > 0
+            ? `Filtre par : ${parts.join(" · ")}`
+            : "Recherche dans tous les textes";
     }
 
     return (
@@ -368,7 +631,14 @@ export default function SearchPage() {
                     </Suspense>
 
                     <main className="flex-1 space-y-6">
-                        <SearchBar className="max-w-full" showFilters={false} />
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                            <div className="flex-1 w-full">
+                                <SearchBar className="max-w-full" showFilters={false} />
+                            </div>
+                            <Suspense fallback={null}>
+                                <SortSelector />
+                            </Suspense>
+                        </div>
 
                         <Suspense
                             fallback={

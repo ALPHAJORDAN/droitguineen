@@ -213,6 +213,10 @@ export async function fetchLois(options?: {
     nature?: string;
     sousCategorie?: string;
     etat?: string;
+    sort?: string;
+    order?: 'asc' | 'desc';
+    dateDebut?: string;
+    dateFin?: string;
 }): Promise<PaginatedResponse<Texte>> {
     const params = new URLSearchParams();
     if (options?.page) params.set('page', options.page.toString());
@@ -220,6 +224,10 @@ export async function fetchLois(options?: {
     if (options?.nature) params.set('nature', options.nature);
     if (options?.sousCategorie) params.set('sousCategorie', options.sousCategorie);
     if (options?.etat) params.set('etat', options.etat);
+    if (options?.sort) params.set('sort', options.sort);
+    if (options?.order) params.set('order', options.order);
+    if (options?.dateDebut) params.set('dateDebut', options.dateDebut);
+    if (options?.dateFin) params.set('dateFin', options.dateFin);
 
     const res = await fetch(`${API_BASE_URL}/lois?${params.toString()}`, {
         cache: 'no-store',
@@ -248,12 +256,16 @@ export async function getLoi(id: string): Promise<Texte> {
 export async function searchTextes(query: string, options?: {
     nature?: string;
     etat?: string;
+    dateDebut?: string;
+    dateFin?: string;
     page?: number;
     limit?: number;
 }): Promise<SearchResponse> {
     const params = new URLSearchParams({ q: query });
     if (options?.nature) params.set('nature', options.nature);
     if (options?.etat) params.set('etat', options.etat);
+    if (options?.dateDebut) params.set('dateDebut', options.dateDebut);
+    if (options?.dateFin) params.set('dateFin', options.dateFin);
     if (options?.page) params.set('page', options.page.toString());
     if (options?.limit) params.set('limit', options.limit.toString());
 

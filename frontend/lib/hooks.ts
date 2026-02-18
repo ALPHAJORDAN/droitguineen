@@ -70,6 +70,10 @@ export function useLois(options?: {
     nature?: string;
     sousCategorie?: string;
     etat?: string;
+    sort?: string;
+    order?: 'asc' | 'desc';
+    dateDebut?: string;
+    dateFin?: string;
 }) {
     return useQuery<PaginatedResponse<Texte>>({
         queryKey: queryKeys.lois.list(options),
@@ -93,6 +97,8 @@ export function useSearch(
     options?: {
         nature?: string;
         etat?: string;
+        dateDebut?: string;
+        dateFin?: string;
         page?: number;
         limit?: number;
     }
