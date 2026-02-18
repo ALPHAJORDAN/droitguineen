@@ -15,7 +15,7 @@ const quickFilters = [
     { label: "Constitution", href: "/recherche?type=Constitution" },
     { label: "Lois", href: "/recherche?type=Lois" },
     { label: "Codes", href: "/recherche?type=Codes" },
-    { label: "Décrets", href: "/recherche?type=Décrets" },
+    { label: "Decrets", href: "/recherche?type=Decrets" },
     { label: "Jurisprudence", href: "/recherche?type=Jurisprudence" },
 ];
 
@@ -58,30 +58,36 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                         )} />
                         <input
                             type="text"
-                            placeholder="Rechercher une loi, un code, un décret..."
+                            placeholder="Rechercher une loi, un code, un decret..."
                             className="flex-1 bg-transparent text-base sm:text-lg outline-none placeholder:text-muted-foreground"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             onFocus={() => setIsFocused(true)}
                             onBlur={() => setIsFocused(false)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                    handleSubmit(e);
-                                }
-                            }}
                         />
                         {query && (
                             <button
                                 type="button"
                                 onClick={() => setQuery("")}
                                 className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-accent"
-                                aria-label="Clear search"
+                                aria-label="Effacer"
                             >
                                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                         )}
+                        <button
+                            type="submit"
+                            className={cn(
+                                "flex-shrink-0 px-4 sm:px-6 py-2 rounded-full text-sm font-medium",
+                                "bg-primary text-primary-foreground hover:bg-primary/90",
+                                "transition-all duration-200"
+                            )}
+                        >
+                            <Search className="h-4 w-4 sm:hidden" />
+                            <span className="hidden sm:inline">Rechercher</span>
+                        </button>
                     </div>
                 </div>
             </form>
