@@ -189,7 +189,13 @@ class UploadService {
 
     if (isCode) {
       sections = this.extractStructureFromText(text);
-      if (sections.length === 0) {
+      // Count articles inside sections recursively
+      let articlesInSections = 0;
+      for (const s of sections) {
+        articlesInSections += this.countArticles(s);
+      }
+      // If sections exist but contain no articles, fall back to flat article extraction
+      if (sections.length === 0 || articlesInSections === 0) {
         articles = this.extractArticles(text);
       }
     } else {
