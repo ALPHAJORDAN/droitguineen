@@ -41,7 +41,7 @@ export function createApp(): Application {
   );
 
   // CORS configuration
-  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3001';
+  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
   app.use(
     cors({
       origin: corsOrigin.split(',').map((o) => o.trim()),

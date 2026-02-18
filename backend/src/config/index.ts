@@ -14,7 +14,7 @@ export const config = {
   meiliMasterKey: process.env.MEILI_MASTER_KEY || '',
 
   // CORS
-  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3001',
+  corsOrigin: process.env.CORS_ORIGIN || 'http://localhost:3000',
 
   // Rate Limiting
   rateLimitWindowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10),
