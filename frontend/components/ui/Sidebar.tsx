@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
     ChevronDown,
@@ -12,8 +12,8 @@ import {
     Gavel,
     ScrollText,
     Scale,
-    Library,
-    Archive
+    BookOpen,
+    FileCheck,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -22,112 +22,64 @@ type MenuItem = {
     href?: string;
     icon?: React.ReactNode;
     children?: MenuItem[];
-    isOpen?: boolean;
 };
 
 const menuItems: MenuItem[] = [
     {
         title: "Constitution",
         href: "/recherche?type=Constitution",
-        icon: <Scale className="h-4 w-4" />,
+        icon: <BookOpen className="h-4 w-4" />,
     },
     {
         title: "Lois",
-        icon: <Gavel className="h-4 w-4" />,
+        icon: <Scale className="h-4 w-4" />,
         children: [
-            { title: "Ordinaires", href: "/recherche?type=Lois&subtype=Ordinaires" },
-            { title: "Organiques", href: "/recherche?type=Lois&subtype=Organiques" },
-            { title: "Finances", href: "/recherche?type=Lois&subtype=Finances" },
-            { title: "Révisions", href: "/recherche?type=Lois&subtype=Révisions" },
+            { title: "Toutes les lois", href: "/recherche?type=Lois" },
+            { title: "Lois organiques", href: "/recherche?type=Lois organiques" },
         ],
     },
     {
         title: "Ordonnances",
         href: "/recherche?type=Ordonnances",
-        icon: <FileText className="h-4 w-4" />,
+        icon: <Gavel className="h-4 w-4" />,
     },
     {
         title: "Décrets",
-        icon: <ScrollText className="h-4 w-4" />,
+        icon: <FileCheck className="h-4 w-4" />,
         children: [
-            { title: "Présidentiels", href: "/recherche?type=Décrets&subtype=Présidentiels" },
-            { title: "Premier Ministre", href: "/recherche?type=Décrets&subtype=Premier Ministre" },
-            { title: "Application", href: "/recherche?type=Décrets&subtype=Application" },
+            { title: "Tous les décrets", href: "/recherche?type=Décrets" },
+            { title: "Décrets-lois", href: "/recherche?type=Décrets-lois" },
         ],
     },
     {
         title: "Arrêtés",
+        href: "/recherche?type=Arrêtés",
         icon: <FileText className="h-4 w-4" />,
-        children: [
-            { title: "Ministériels", href: "/recherche?type=Arrêtés&subtype=Ministériels" },
-            { title: "Interministériels", href: "/recherche?type=Arrêtés&subtype=Interministériels" },
-            { title: "Gouvernoraux", href: "/recherche?type=Arrêtés&subtype=Gouvernoraux" },
-            { title: "Préfectoraux", href: "/recherche?type=Arrêtés&subtype=Préfectoraux" },
-            { title: "Communaux", href: "/recherche?type=Arrêtés&subtype=Communaux" },
-        ],
     },
     {
-        title: "Décisions",
-        icon: <FileText className="h-4 w-4" />,
+        title: "Décisions & Circulaires",
+        icon: <ScrollText className="h-4 w-4" />,
         children: [
-            { title: "Circulaires", href: "/recherche?type=Décisions&subtype=Circulaires" },
-            { title: "Notes", href: "/recherche?type=Décisions&subtype=Notes" },
-            { title: "Instructions", href: "/recherche?type=Décisions&subtype=Instructions" },
+            { title: "Décisions", href: "/recherche?type=Décisions" },
+            { title: "Circulaires", href: "/recherche?type=Circulaires" },
         ],
     },
     {
         title: "Codes",
+        href: "/recherche?type=Codes",
         icon: <Book className="h-4 w-4" />,
-        children: [
-            { title: "Code Pénal", href: "/lois/code-penal" },
-            { title: "Code Procédure Pénale", href: "/lois/code-procedure-penale" },
-            { title: "Code Civil", href: "/lois/code-civil" },
-            { title: "Code du Travail", href: "/lois/code-travail" },
-            { title: "Code Minier", href: "/lois/code-minier" },
-            { title: "Code Électoral", href: "/lois/code-electoral" },
-            { title: "Code Foncier", href: "/lois/code-foncier" },
-            { title: "Autres", href: "/recherche?type=Codes" },
-        ],
     },
     {
         title: "Jurisprudence",
+        href: "/recherche?type=Jurisprudence",
         icon: <Scale className="h-4 w-4" />,
-        children: [
-            { title: "Cour Suprême", href: "/recherche?type=Jurisprudence&jurisdiction=Cour Suprême" },
-            { title: "Cours d'Appel", href: "/recherche?type=Jurisprudence&jurisdiction=Cours d'Appel" },
-            { title: "Tribunaux Première Instance", href: "/recherche?type=Jurisprudence&jurisdiction=TPI" },
-            { title: "Tribunaux Militaires", href: "/recherche?type=Jurisprudence&jurisdiction=TM" },
-            { title: "Juridictions Spéciales", href: "/recherche?type=Jurisprudence&jurisdiction=Spéciales" },
-        ],
     },
     {
-        title: "Journal Officiel",
-        icon: <Library className="h-4 w-4" />,
-        children: [
-            { title: "2025", href: "/recherche?type=Journal Officiel&year=2025" },
-            { title: "2024", href: "/recherche?type=Journal Officiel&year=2024" },
-            { title: "Archives", href: "/recherche?type=Journal Officiel" },
-        ],
-    },
-    {
-        title: "Traités",
+        title: "Traités & Conventions",
         icon: <FileText className="h-4 w-4" />,
         children: [
-            { title: "ONU", href: "/recherche?type=Traités&org=ONU" },
-            { title: "Union Africaine", href: "/recherche?type=Traités&org=UA" },
-            { title: "CEDEAO", href: "/recherche?type=Traités&org=CEDEAO" },
-            { title: "Bilatéraux", href: "/recherche?type=Traités&subtype=Bilatéraux" },
-        ],
-    },
-    {
-        title: "Archives",
-        icon: <Archive className="h-4 w-4" />,
-        children: [
-            { title: "1958-1984", href: "/recherche?period=1958-1984" },
-            { title: "1984-2008", href: "/recherche?period=1984-2008" },
-            { title: "2008-2010", href: "/recherche?period=2008-2010" },
-            { title: "2010-2021", href: "/recherche?period=2010-2021" },
-            { title: "Périodes Transitoires", href: "/recherche?period=Transitoire" },
+            { title: "Traités", href: "/recherche?type=Traités" },
+            { title: "Conventions", href: "/recherche?type=Conventions" },
         ],
     },
 ];
@@ -139,6 +91,7 @@ interface SidebarProps {
 
 export function Sidebar({ className, onItemClick }: SidebarProps) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const [openItems, setOpenItems] = useState<string[]>([]);
 
     const toggleItem = (title: string) => {
@@ -149,7 +102,13 @@ export function Sidebar({ className, onItemClick }: SidebarProps) {
         );
     };
 
-    const isActive = (href?: string) => href && pathname.startsWith(href);
+    const isActive = (href?: string) => {
+        if (!href) return false;
+        const url = new URL(href, "http://localhost");
+        if (url.pathname !== pathname) return false;
+        const type = url.searchParams.get("type");
+        return type ? searchParams.get("type") === type : true;
+    };
 
     return (
         <div className={cn("w-64 border-r bg-background min-h-[calc(100vh-4rem)] p-4 overflow-y-auto", className)}>

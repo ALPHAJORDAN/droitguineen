@@ -13,9 +13,10 @@ interface SearchBarProps extends React.HTMLAttributes<HTMLDivElement> {
 
 const quickFilters = [
     { label: "Constitution", href: "/recherche?type=Constitution" },
-    { label: "Codes", href: "/recherche?type=Codes" },
     { label: "Lois", href: "/recherche?type=Lois" },
+    { label: "Codes", href: "/recherche?type=Codes" },
     { label: "Décrets", href: "/recherche?type=Décrets" },
+    { label: "Jurisprudence", href: "/recherche?type=Jurisprudence" },
 ];
 
 export function SearchBar({ className, onSearch, defaultValue = "", showFilters = true, ...props }: SearchBarProps) {

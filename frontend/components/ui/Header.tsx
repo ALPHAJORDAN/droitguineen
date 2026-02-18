@@ -13,7 +13,7 @@ import {
 import { Sidebar } from "@/components/ui/Sidebar";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { Menu, X, Upload, LogIn, LogOut, User } from "lucide-react";
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
@@ -21,6 +21,29 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/Button";
 
 export function Header() {
+    return (
+        <Suspense fallback={<HeaderSkeleton />}>
+            <HeaderContent />
+        </Suspense>
+    );
+}
+
+function HeaderSkeleton() {
+    return (
+        <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
+            <div className="container flex h-14 items-center">
+                <div className="mr-2 p-2"><Menu className="h-5 w-5" /></div>
+                <div className="flex items-center space-x-2 mr-6">
+                    <div className="w-8 h-8 bg-muted rounded" />
+                    <span className="font-semibold text-lg hidden sm:inline-block">Legifrance-Guinée</span>
+                </div>
+                <div className="ml-auto"><ThemeToggle /></div>
+            </div>
+        </header>
+    );
+}
+
+function HeaderContent() {
     const [open, setOpen] = useState(false);
     const pathname = usePathname();
     const searchParams = useSearchParams();
@@ -30,22 +53,15 @@ export function Header() {
     const isActive = (path: string) => {
         // For /lois route
         if (path === '/lois') {
-            return pathname.startsWith('/lois');
+            return pathname === '/lois' && !searchParams.get('nature');
         }
 
         // For search routes with query parameters
         if (pathname === '/recherche') {
             const typeParam = searchParams.get('type');
-
-            if (path.includes('type=Codes')) {
-                return typeParam === 'Codes';
-            }
-            if (path.includes('type=Jurisprudence')) {
-                return typeParam === 'Jurisprudence';
-            }
-            if (path.includes('Journal Officiel')) {
-                return typeParam === 'Journal Officiel';
-            }
+            const url = new URL(path, 'http://localhost');
+            const pathType = url.searchParams.get('type');
+            if (pathType) return typeParam === pathType;
         }
 
         return false;
@@ -131,15 +147,15 @@ export function Header() {
                         Jurisprudence
                     </Link>
                     <Link
-                        href="/recherche?type=Journal Officiel"
+                        href="/recherche"
                         className={cn(
                             "relative py-1 transition-all hover:text-foreground",
-                            isActive('/recherche?type=Journal Officiel')
+                            pathname === '/recherche' && !searchParams.get('type')
                                 ? "text-foreground bg-accent/50 px-3 rounded-full after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:bg-primary after:rounded-full"
                                 : "text-foreground/70"
                         )}
                     >
-                        Journal Officiel
+                        Recherche
                     </Link>
                 </nav>
                 <div className="ml-auto flex items-center space-x-2 pr-4">

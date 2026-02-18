@@ -6,19 +6,26 @@ import { useLois } from "@/lib/hooks";
 import { NATURE_LABELS, Texte } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 import Link from "next/link";
-import { Scale, FileText, BookOpen, Calendar, ArrowRight, AlertCircle, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Scale, FileText, BookOpen, Calendar, ArrowRight, AlertCircle, Loader2, Gavel, FileCheck } from "lucide-react";
+import { useState, Suspense } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 
 const NATURE_ICONS: Record<string, React.ReactNode> = {
     LOI: <Scale className="h-5 w-5" />,
     LOI_ORGANIQUE: <Scale className="h-5 w-5" />,
     LOI_CONSTITUTIONNELLE: <BookOpen className="h-5 w-5" />,
-    ORDONNANCE: <FileText className="h-5 w-5" />,
-    DECRET: <FileText className="h-5 w-5" />,
+    ORDONNANCE: <Gavel className="h-5 w-5" />,
+    DECRET: <FileCheck className="h-5 w-5" />,
+    ARRETE: <FileText className="h-5 w-5" />,
+    JURISPRUDENCE: <Scale className="h-5 w-5" />,
+    CODE: <BookOpen className="h-5 w-5" />,
 };
 
-export default function LoisPage() {
-    const [filter, setFilter] = useState<string>("");
+function LoisPageContent() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const natureParam = searchParams.get("nature") || "";
+    const [filter, setFilter] = useState<string>(natureParam);
 
     const { data, isLoading, isError, error } = useLois({
         limit: 50,
@@ -41,16 +48,16 @@ export default function LoisPage() {
                 {/* Filters */}
                 <div className="flex flex-wrap gap-2 mb-6">
                     <button
-                        onClick={() => setFilter("")}
+                        onClick={() => { setFilter(""); router.push("/lois"); }}
                         className={`px-4 py-2 rounded-full text-sm transition-colors ${filter === "" ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"
                             }`}
                     >
                         Tous
                     </button>
-                    {["CODE", "LOI", "DECRET", "ORDONNANCE", "LOI_CONSTITUTIONNELLE"].map((nature) => (
+                    {["LOI_CONSTITUTIONNELLE", "LOI", "ORDONNANCE", "DECRET", "CODE", "ARRETE", "JURISPRUDENCE"].map((nature) => (
                         <button
                             key={nature}
-                            onClick={() => setFilter(nature)}
+                            onClick={() => { setFilter(nature); router.push(`/lois?nature=${nature}`); }}
                             className={`px-4 py-2 rounded-full text-sm transition-colors ${filter === nature ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"
                                 }`}
                         >
@@ -144,5 +151,23 @@ export default function LoisPage() {
             </main>
             <Footer />
         </div>
+    );
+}
+
+export default function LoisPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1 container py-8 px-4 md:px-6">
+                    <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    </div>
+                </main>
+                <Footer />
+            </div>
+        }>
+            <LoisPageContent />
+        </Suspense>
     );
 }

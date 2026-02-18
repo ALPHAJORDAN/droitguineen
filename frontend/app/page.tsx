@@ -33,7 +33,7 @@ const CATEGORIES = [
     { nature: "JURISPRUDENCE", label: "Jurisprudence", description: "Décisions de justice", icon: <Scale className="h-8 w-8" /> },
 ];
 
-export default function Home() {
+function HomeContent() {
     // Stats queries (limit: 1, only need pagination.total)
     const allTextes = useLois({ limit: 1 });
     const lois = useLois({ limit: 1, nature: "LOI" });
@@ -239,4 +239,8 @@ export default function Home() {
             <Footer />
         </div>
     );
+}
+
+export default function Home() {
+    return <HomeContent />;
 }
