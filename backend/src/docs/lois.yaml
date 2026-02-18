@@ -1,0 +1,437 @@
+# Documentation API pour les routes /lois
+
+paths:
+  /lois:
+    get:
+      tags:
+        - Lois
+      summary: Liste tous les textes juridiques
+      description: Retourne une liste paginée de textes juridiques avec filtres optionnels
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Numéro de page
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+          description: Nombre d'éléments par page
+        - name: nature
+          in: query
+          schema:
+            $ref: '#/components/schemas/Nature'
+          description: Filtrer par nature du texte
+        - name: etat
+          in: query
+          schema:
+            $ref: '#/components/schemas/EtatTexte'
+          description: Filtrer par état du texte
+        - name: annee
+          in: query
+          schema:
+            type: integer
+            minimum: 1900
+            maximum: 2100
+          description: Filtrer par année de signature
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [dateSignature, datePublication, titre, createdAt]
+            default: dateSignature
+          description: Champ de tri
+        - name: order
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Ordre de tri
+      responses:
+        '200':
+          description: Liste des textes
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Texte'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+    post:
+      tags:
+        - Lois
+      summary: Crée un nouveau texte juridique
+      description: Ajoute un nouveau texte juridique dans la base de données
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - cid
+                - titre
+                - nature
+              properties:
+                cid:
+                  type: string
+                  minLength: 1
+                  maxLength: 50
+                  description: Common Identifier unique
+                nor:
+                  type: string
+                  pattern: '^[A-Z]{4}[0-9]{7}[A-Z]$'
+                  description: Numéro d'ordre (12 caractères)
+                titre:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+                titreComplet:
+                  type: string
+                  maxLength: 2000
+                nature:
+                  $ref: '#/components/schemas/Nature'
+                numero:
+                  type: string
+                  maxLength: 50
+                dateSignature:
+                  type: string
+                  format: date-time
+                datePublication:
+                  type: string
+                  format: date-time
+                etat:
+                  $ref: '#/components/schemas/EtatTexte'
+                visas:
+                  type: string
+                signataires:
+                  type: string
+                sourceJO:
+                  type: string
+                  maxLength: 200
+              example:
+                cid: "LOI-2024-001"
+                titre: "Loi relative à la protection de l'environnement"
+                nature: "LOI"
+                numero: "2024-001"
+                dateSignature: "2024-01-15T00:00:00.000Z"
+                etat: "VIGUEUR"
+      responses:
+        '201':
+          description: Texte créé avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Texte'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Conflit - CID déjà existant
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /lois/{id}:
+    get:
+      tags:
+        - Lois
+      summary: Récupère un texte par son ID
+      description: Retourne un texte juridique avec ses articles et relations
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID unique du texte
+      responses:
+        '200':
+          description: Texte trouvé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    allOf:
+                      - $ref: '#/components/schemas/Texte'
+                      - type: object
+                        properties:
+                          articles:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Article'
+                          relationsSource:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Relation'
+                          relationsCible:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Relation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Lois
+      summary: Met à jour un texte
+      description: Met à jour les informations d'un texte juridique existant
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                titre:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+                titreComplet:
+                  type: string
+                  maxLength: 2000
+                etat:
+                  $ref: '#/components/schemas/EtatTexte'
+                visas:
+                  type: string
+                signataires:
+                  type: string
+      responses:
+        '200':
+          description: Texte mis à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Texte'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Lois
+      summary: Supprime un texte
+      description: Supprime définitivement un texte juridique et ses articles associés
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Texte supprimé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Texte supprimé avec succès"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lois/{id}/articles:
+    get:
+      tags:
+        - Lois
+      summary: Liste les articles d'un texte
+      description: Retourne tous les articles associés à un texte juridique
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Liste des articles
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Article'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags:
+        - Lois
+      summary: Ajoute un article à un texte
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - numero
+                - contenu
+              properties:
+                cid:
+                  type: string
+                numero:
+                  type: string
+                  maxLength: 50
+                contenu:
+                  type: string
+                etat:
+                  type: string
+                  enum: [VIGUEUR, VIGUEUR_DIFF, MODIFIE, ABROGE, PERIME]
+                  default: VIGUEUR
+                ordre:
+                  type: integer
+      responses:
+        '201':
+          description: Article créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Article'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lois/cid/{cid}:
+    get:
+      tags:
+        - Lois
+      summary: Récupère un texte par son CID
+      description: Recherche un texte juridique par son Common Identifier
+      parameters:
+        - name: cid
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Common Identifier du texte
+      responses:
+        '200':
+          description: Texte trouvé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Texte'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /lois/stats:
+    get:
+      tags:
+        - Lois
+      summary: Statistiques des textes
+      description: Retourne des statistiques agrégées sur les textes juridiques
+      responses:
+        '200':
+          description: Statistiques
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: integer
+                        description: Nombre total de textes
+                      parNature:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                        description: Répartition par nature
+                      parEtat:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                        description: Répartition par état
+                      parAnnee:
+                        type: object
+                        additionalProperties:
+                          type: integer
+                        description: Répartition par année

@@ -1,0 +1,276 @@
+# Documentation API pour les routes /export
+
+paths:
+  /export/{id}:
+    get:
+      tags:
+        - Export
+      summary: Exporte un texte
+      description: |
+        Exporte un texte juridique dans différents formats.
+
+        Formats supportés:
+        - **pdf**: Document PDF formaté
+        - **docx**: Document Microsoft Word
+        - **txt**: Texte brut
+        - **html**: Document HTML
+        - **json**: Données JSON complètes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID du texte à exporter
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [pdf, docx, txt, html, json]
+            default: pdf
+          description: Format d'export
+        - name: includeArticles
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Inclure les articles dans l'export
+        - name: includeRelations
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Inclure les relations dans l'export
+        - name: includeMetadata
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Inclure les métadonnées (visas, signataires, etc.)
+      responses:
+        '200':
+          description: Fichier exporté
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+            text/plain:
+              schema:
+                type: string
+            text/html:
+              schema:
+                type: string
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Texte'
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: 'attachment; filename="texte-{cid}.{format}"'
+        '400':
+          description: Format non supporté
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /export/batch:
+    post:
+      tags:
+        - Export
+      summary: Export multiple de textes
+      description: Exporte plusieurs textes dans une archive ZIP
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - ids
+              properties:
+                ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  minItems: 1
+                  maxItems: 50
+                  description: IDs des textes à exporter
+                format:
+                  type: string
+                  enum: [pdf, docx, txt, html, json]
+                  default: pdf
+                  description: Format d'export pour tous les fichiers
+                includeArticles:
+                  type: boolean
+                  default: true
+              example:
+                ids:
+                  - "550e8400-e29b-41d4-a716-446655440000"
+                  - "550e8400-e29b-41d4-a716-446655440001"
+                format: "pdf"
+      responses:
+        '200':
+          description: Archive ZIP contenant les exports
+          content:
+            application/zip:
+              schema:
+                type: string
+                format: binary
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+              description: 'attachment; filename="export-{timestamp}.zip"'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /export/search:
+    post:
+      tags:
+        - Export
+      summary: Export des résultats de recherche
+      description: Exporte les résultats d'une recherche dans un fichier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - query
+              properties:
+                query:
+                  type: string
+                  description: Requête de recherche
+                filters:
+                  type: object
+                  properties:
+                    nature:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Nature'
+                    etat:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/EtatTexte'
+                    anneeDebut:
+                      type: integer
+                    anneeFin:
+                      type: integer
+                format:
+                  type: string
+                  enum: [csv, xlsx, json]
+                  default: csv
+                  description: Format d'export
+                maxResults:
+                  type: integer
+                  minimum: 1
+                  maximum: 1000
+                  default: 100
+                  description: Nombre maximum de résultats
+                fields:
+                  type: array
+                  items:
+                    type: string
+                    enum: [titre, cid, nor, nature, numero, dateSignature, datePublication, etat]
+                  description: Champs à inclure dans l'export
+              example:
+                query: "environnement"
+                filters:
+                  nature: ["LOI", "DECRET"]
+                format: "csv"
+                maxResults: 500
+                fields: ["titre", "cid", "nature", "dateSignature"]
+      responses:
+        '200':
+          description: Fichier d'export
+          content:
+            text/csv:
+              schema:
+                type: string
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /export/consolidated/{id}:
+    get:
+      tags:
+        - Export
+      summary: Export version consolidée
+      description: |
+        Exporte la version consolidée d'un texte, intégrant toutes les modifications.
+
+        La consolidation prend en compte:
+        - Les modifications apportées par d'autres textes
+        - Les abrogations partielles
+        - Les articles modifiés ou ajoutés
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: ID du texte à consolider
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Date de consolidation (défaut = aujourd'hui)
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [pdf, docx, html]
+            default: pdf
+        - name: showChanges
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Afficher les modifications en surbrillance
+      responses:
+        '200':
+          description: Version consolidée
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.wordprocessingml.document:
+              schema:
+                type: string
+                format: binary
+            text/html:
+              schema:
+                type: string
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'

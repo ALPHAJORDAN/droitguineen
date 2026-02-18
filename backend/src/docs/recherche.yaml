@@ -1,0 +1,309 @@
+# Documentation API pour les routes /recherche
+
+paths:
+  /recherche:
+    get:
+      tags:
+        - Recherche
+      summary: Recherche full-text
+      description: |
+        Recherche dans les textes juridiques avec Meilisearch.
+
+        Fonctionnalités:
+        - Recherche full-text avec tolérance aux fautes
+        - Filtres par nature, état, année
+        - Tri par pertinence ou date
+        - Surlignage des résultats
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 2
+            maxLength: 500
+          description: Terme de recherche
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: nature
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/Nature'
+          style: form
+          explode: true
+          description: Filtrer par nature(s)
+        - name: etat
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/EtatTexte'
+          style: form
+          explode: true
+          description: Filtrer par état(s)
+        - name: anneeDebut
+          in: query
+          schema:
+            type: integer
+            minimum: 1900
+          description: Année de début (incluse)
+        - name: anneeFin
+          in: query
+          schema:
+            type: integer
+            maximum: 2100
+          description: Année de fin (incluse)
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [relevance, dateSignature:desc, dateSignature:asc, datePublication:desc]
+            default: relevance
+          description: Critère de tri
+        - name: highlight
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Activer le surlignage des résultats
+      responses:
+        '200':
+          description: Résultats de recherche
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      hits:
+                        type: array
+                        items:
+                          allOf:
+                            - $ref: '#/components/schemas/Texte'
+                            - type: object
+                              properties:
+                                _highlight:
+                                  type: object
+                                  description: Champs avec surlignage HTML
+                                _score:
+                                  type: number
+                                  description: Score de pertinence
+                      query:
+                        type: string
+                        description: Requête traitée
+                      processingTimeMs:
+                        type: integer
+                        description: Temps de traitement en ms
+                      estimatedTotalHits:
+                        type: integer
+                        description: Nombre total estimé de résultats
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+                      facets:
+                        type: object
+                        properties:
+                          nature:
+                            type: object
+                            additionalProperties:
+                              type: integer
+                          etat:
+                            type: object
+                            additionalProperties:
+                              type: integer
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                queryTooShort:
+                  summary: Requête trop courte
+                  value:
+                    success: false
+                    error: "Erreur de validation"
+                    details:
+                      - path: ["q"]
+                        message: "La recherche doit contenir au moins 2 caractères"
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /recherche/suggestions:
+    get:
+      tags:
+        - Recherche
+      summary: Suggestions de recherche
+      description: Retourne des suggestions basées sur une saisie partielle (autocomplete)
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+          description: Début de saisie
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 5
+          description: Nombre de suggestions
+      responses:
+        '200':
+          description: Suggestions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        text:
+                          type: string
+                          description: Suggestion de texte
+                        type:
+                          type: string
+                          enum: [titre, numero, terme]
+                          description: Type de suggestion
+                        count:
+                          type: integer
+                          description: Nombre de résultats associés
+
+  /recherche/advanced:
+    post:
+      tags:
+        - Recherche
+      summary: Recherche avancée
+      description: Recherche avec critères multiples et opérateurs booléens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                must:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      field:
+                        type: string
+                        enum: [titre, contenu, visas, signataires]
+                      value:
+                        type: string
+                      operator:
+                        type: string
+                        enum: [contains, exact, startsWith]
+                        default: contains
+                  description: Tous ces critères doivent être satisfaits (AND)
+                should:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      field:
+                        type: string
+                      value:
+                        type: string
+                  description: Au moins un de ces critères (OR)
+                mustNot:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      field:
+                        type: string
+                      value:
+                        type: string
+                  description: Exclure ces critères (NOT)
+                filters:
+                  type: object
+                  properties:
+                    nature:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/Nature'
+                    etat:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/EtatTexte'
+                    dateRange:
+                      type: object
+                      properties:
+                        field:
+                          type: string
+                          enum: [dateSignature, datePublication]
+                        from:
+                          type: string
+                          format: date
+                        to:
+                          type: string
+                          format: date
+                page:
+                  type: integer
+                  default: 1
+                limit:
+                  type: integer
+                  default: 20
+              example:
+                must:
+                  - field: titre
+                    value: environnement
+                    operator: contains
+                filters:
+                  nature: [LOI, DECRET]
+                  dateRange:
+                    field: dateSignature
+                    from: "2020-01-01"
+                    to: "2024-12-31"
+      responses:
+        '200':
+          description: Résultats de recherche avancée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      hits:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Texte'
+                      totalHits:
+                        type: integer
+                      pagination:
+                        $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'

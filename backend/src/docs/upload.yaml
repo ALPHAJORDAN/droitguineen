@@ -1,0 +1,331 @@
+# Documentation API pour les routes /upload
+
+paths:
+  /upload:
+    post:
+      tags:
+        - Upload
+      summary: Upload et traitement d'un PDF
+      description: |
+        Upload un fichier PDF et extrait son contenu via OCR.
+
+        Le traitement inclut:
+        - Validation du fichier (signature PDF, taille max 50MB)
+        - Extraction du texte via Tesseract.js
+        - Optionnellement, utilisation de Google Cloud Vision pour une meilleure précision
+        - Détection automatique de la structure (titre, articles, etc.)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: Fichier PDF (max 50MB)
+                useGoogleVision:
+                  type: boolean
+                  default: false
+                  description: Utiliser Google Cloud Vision pour l'OCR
+                language:
+                  type: string
+                  default: fra
+                  description: Code langue pour Tesseract (fra, eng, etc.)
+            encoding:
+              file:
+                contentType: application/pdf
+      responses:
+        '200':
+          description: PDF traité avec succès
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      filename:
+                        type: string
+                        description: Nom du fichier stocké
+                      originalName:
+                        type: string
+                        description: Nom original du fichier
+                      pages:
+                        type: integer
+                        description: Nombre de pages
+                      text:
+                        type: string
+                        description: Texte extrait
+                      metadata:
+                        type: object
+                        properties:
+                          titre:
+                            type: string
+                          nature:
+                            type: string
+                          numero:
+                            type: string
+                          dateSignature:
+                            type: string
+                      articles:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            numero:
+                              type: string
+                            contenu:
+                              type: string
+                      confidence:
+                        type: number
+                        minimum: 0
+                        maximum: 1
+                        description: Score de confiance OCR
+        '400':
+          description: Fichier invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidFile:
+                  summary: Fichier non PDF
+                  value:
+                    success: false
+                    error: "Le fichier doit être un PDF valide"
+                tooLarge:
+                  summary: Fichier trop volumineux
+                  value:
+                    success: false
+                    error: "Taille maximale dépassée (50MB)"
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /upload/batch:
+    post:
+      tags:
+        - Upload
+      summary: Upload multiple de PDFs
+      description: Upload et traitement de plusieurs fichiers PDF en une seule requête (max 10 fichiers)
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - files
+              properties:
+                files:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  maxItems: 10
+                  description: Fichiers PDF (max 10 fichiers, 50MB chacun)
+                useGoogleVision:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: Fichiers traités
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      processed:
+                        type: integer
+                        description: Nombre de fichiers traités avec succès
+                      failed:
+                        type: integer
+                        description: Nombre d'échecs
+                      results:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            filename:
+                              type: string
+                            success:
+                              type: boolean
+                            error:
+                              type: string
+                            data:
+                              type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /upload/preview:
+    post:
+      tags:
+        - Upload
+      summary: Prévisualisation sans persistance
+      description: Traite un PDF et retourne les métadonnées extraites sans sauvegarder en base
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Prévisualisation générée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      suggestedMetadata:
+                        type: object
+                        description: Métadonnées suggérées
+                      extractedText:
+                        type: string
+                        description: Aperçu du texte extrait
+                      pageCount:
+                        type: integer
+                      confidence:
+                        type: number
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /upload/confirm:
+    post:
+      tags:
+        - Upload
+      summary: Confirme et sauvegarde un texte
+      description: Après prévisualisation, confirme et sauvegarde le texte avec les métadonnées validées
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - uploadId
+                - metadata
+              properties:
+                uploadId:
+                  type: string
+                  description: ID de l'upload temporaire
+                metadata:
+                  type: object
+                  required:
+                    - cid
+                    - titre
+                    - nature
+                  properties:
+                    cid:
+                      type: string
+                    titre:
+                      type: string
+                    nature:
+                      $ref: '#/components/schemas/Nature'
+                    numero:
+                      type: string
+                    dateSignature:
+                      type: string
+                      format: date-time
+                articles:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      numero:
+                        type: string
+                      contenu:
+                        type: string
+      responses:
+        '201':
+          description: Texte créé
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Texte'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Upload temporaire non trouvé ou expiré
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /upload/status/{jobId}:
+    get:
+      tags:
+        - Upload
+      summary: Statut d'un traitement
+      description: Vérifie le statut d'un traitement OCR en cours
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: ID du job de traitement
+      responses:
+        '200':
+          description: Statut du job
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      jobId:
+                        type: string
+                      status:
+                        type: string
+                        enum: [pending, processing, completed, failed]
+                      progress:
+                        type: integer
+                        minimum: 0
+                        maximum: 100
+                      result:
+                        type: object
+                        description: Résultat si completed
+                      error:
+                        type: string
+                        description: Message d'erreur si failed
+        '404':
+          $ref: '#/components/responses/NotFound'

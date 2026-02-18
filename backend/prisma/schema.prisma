@@ -1,0 +1,261 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Texte juridique (LOI, DECRET, ORDONNANCE, ARRETE, etc.)
+model Texte {
+  id              String    @id @default(uuid())
+  cid             String    @unique  // Common Identifier - identifiant unique pour toutes les versions
+  nor             String?   @unique  // Numéro d'Ordre (12 caractères alphanumériques)
+  eli             String?   @unique  // European Legislation Identifier (URI pérenne)
+  
+  // Métadonnées du texte
+  titre           String
+  titreComplet    String?   @db.Text
+  nature          Nature    // Type de texte: LOI, ORDONNANCE, DECRET, ARRETE, etc.
+  numero          String?   // Numéro du texte (ex: 2023-123)
+  
+  // Dates importantes
+  dateSignature   DateTime?
+  datePublication DateTime?
+  dateEntreeVigueur DateTime?
+  dateAbrogation  DateTime?
+  
+  // État et version
+  etat            EtatTexte @default(VIGUEUR)
+  versionEnVigueur Boolean  @default(true)
+  
+  // Contenu
+  visas           String?   @db.Text  // Visas du texte
+  signataires     String?   // Signataires du texte
+  
+  // Source et fichiers
+  sourceJO        String?   // Référence au Journal Officiel
+  urlJO           String?   // URL du JO
+  fichierPdf      String?   // Chemin vers le PDF original
+  
+  // Date et hiérarchie
+  sousCategorie   String?   // Sous-catégorie pour l'arborescence (ex: "ordinaires", "presidentiels")
+
+  // Relations
+  articles        Article[]
+  versions        VersionTexte[]
+  sections        Section[]
+  
+  // Relations entre textes (abrogation, modification, citation, etc.)
+  relationsSource TexteRelation[] @relation("RelationSource") // Ce texte modifie/abroge d'autres
+  relationsCible  TexteRelation[] @relation("RelationCible")  // Ce texte est modifié/abrogé par d'autres
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([nature])
+  @@index([sousCategorie])
+  @@index([datePublication])
+  @@index([etat])
+}
+
+// Article d'un texte juridique
+model Article {
+  id              String    @id @default(uuid())
+  cid             String    @unique  // Common Identifier de l'article
+  
+  // Identification
+  numero          String    // Numéro de l'article (1, 2, 3, 1er, etc.)
+  
+  // Contenu
+  contenu         String    @db.Text
+  
+  // État et version
+  etat            EtatArticle @default(VIGUEUR)
+  dateDebut       DateTime?
+  dateFin         DateTime?
+  
+  // Position dans le texte
+  ordre           Int       // Ordre d'affichage
+  
+  // Relations
+  texteId         String
+  texte           Texte     @relation(fields: [texteId], references: [id], onDelete: Cascade)
+  sectionId       String?
+  section         Section?  @relation(fields: [sectionId], references: [id])
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([texteId])
+  @@index([etat])
+}
+
+// Section/Titre/Chapitre d'un texte
+model Section {
+  id              String    @id @default(uuid())
+  cid             String    @unique
+  
+  titre           String
+  niveau          Int       // Niveau de la section (1=Titre, 2=Chapitre, 3=Section, etc.)
+  ordre           Int       // Ordre d'affichage
+  
+  // Relation avec le texte
+  texteId         String
+  texte           Texte     @relation(fields: [texteId], references: [id], onDelete: Cascade)
+  
+  // Hiérarchie
+  parentId        String?
+  parent          Section?  @relation("SectionHierarchy", fields: [parentId], references: [id])
+  enfants         Section[] @relation("SectionHierarchy")
+  
+  articles        Article[]
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  
+  @@index([texteId])
+}
+
+// Historique des versions d'un texte
+model VersionTexte {
+  id              String    @id @default(uuid())
+  
+  texteId         String
+  texte           Texte     @relation(fields: [texteId], references: [id], onDelete: Cascade)
+  
+  dateDebut       DateTime
+  dateFin         DateTime?
+  description     String?   // Description de la modification
+  
+  createdAt       DateTime  @default(now())
+  
+  @@index([texteId])
+}
+
+// Énumérations
+enum Nature {
+  LOI
+  LOI_ORGANIQUE
+  LOI_CONSTITUTIONNELLE
+  ORDONNANCE
+  DECRET
+  DECRET_LOI
+  ARRETE
+  CIRCULAIRE
+  DECISION
+  CONVENTION
+  TRAITE
+  CODE
+  JURISPRUDENCE
+  AUTRE
+}
+
+enum EtatTexte {
+  VIGUEUR           // En vigueur
+  VIGUEUR_DIFF      // En vigueur différée
+  MODIFIE           // Modifié
+  ABROGE            // Abrogé
+  ABROGE_DIFF       // Abrogé différé
+  PERIME            // Périmé
+}
+
+enum EtatArticle {
+  VIGUEUR
+  VIGUEUR_DIFF
+  MODIFIE
+  ABROGE
+  PERIME
+}
+
+// Relations entre textes juridiques
+model TexteRelation {
+  id              String          @id @default(uuid())
+  
+  // Type de relation
+  type            TypeRelation
+  
+  // Texte source (celui qui fait la modification/abrogation)
+  texteSourceId   String
+  texteSource     Texte           @relation("RelationSource", fields: [texteSourceId], references: [id], onDelete: Cascade)
+  
+  // Texte cible (celui qui est modifié/abrogé)
+  texteCibleId    String
+  texteCible      Texte           @relation("RelationCible", fields: [texteCibleId], references: [id], onDelete: Cascade)
+  
+  // Article spécifique concerné (optionnel)
+  articleCibleNum String?         // Numéro de l'article concerné
+  
+  // Détails de la relation
+  description     String?         @db.Text  // Description de la modification
+  dateEffet       DateTime?       // Date d'effet de la modification
+  
+  // Référence dans le texte source
+  articleSourceNum String?        // Article du texte source qui établit la relation
+  
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  
+  @@unique([texteSourceId, texteCibleId, type, articleCibleNum])
+  @@index([texteSourceId])
+  @@index([texteCibleId])
+  @@index([type])
+}
+
+enum TypeRelation {
+  ABROGE            // Le texte source abroge le texte cible
+  ABROGE_PARTIELLEMENT // Abrogation partielle
+  MODIFIE           // Le texte source modifie le texte cible
+  COMPLETE          // Le texte source complète le texte cible
+  CITE              // Le texte source cite le texte cible
+  APPLIQUE          // Le texte source applique/exécute le texte cible
+  PROROGE           // Le texte source proroge le texte cible
+  SUSPEND           // Le texte source suspend le texte cible
+  RATIFIE           // Le texte source ratifie le texte cible (pour ordonnances)
+  CODIFIE           // Le texte source codifie le texte cible
+  CONSOLIDE         // Version consolidée
+}
+
+// ==========================================
+// Authentification & Utilisateurs
+// ==========================================
+
+enum UserRole {
+  ADMIN
+  EDITOR
+  USER
+}
+
+model User {
+  id            String         @id @default(uuid())
+  email         String         @unique
+  password      String         // Hash bcrypt
+  nom           String
+  prenom        String
+  role          UserRole       @default(USER)
+  isActive      Boolean        @default(true)
+
+  refreshTokens RefreshToken[]
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([email])
+  @@index([role])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+

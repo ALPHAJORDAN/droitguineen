@@ -1,0 +1,491 @@
+# Documentation API pour les routes /relations
+
+paths:
+  /relations:
+    get:
+      tags:
+        - Relations
+      summary: Liste les relations entre textes
+      description: Retourne une liste paginée des relations avec filtres optionnels
+      parameters:
+        - name: texteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Filtrer par texte (source ou cible)
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/TypeRelation'
+          description: Filtrer par type de relation
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [source, cible, both]
+            default: both
+          description: Direction de la relation par rapport au texteId
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Liste des relations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      allOf:
+                        - $ref: '#/components/schemas/Relation'
+                        - type: object
+                          properties:
+                            texteSource:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                titre:
+                                  type: string
+                                cid:
+                                  type: string
+                            texteCible:
+                              type: object
+                              properties:
+                                id:
+                                  type: string
+                                titre:
+                                  type: string
+                                cid:
+                                  type: string
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+    post:
+      tags:
+        - Relations
+      summary: Crée une relation entre deux textes
+      description: |
+        Établit une relation entre un texte source et un texte cible.
+
+        Types de relations disponibles:
+        - ABROGE: Le texte source abroge le texte cible
+        - ABROGE_PARTIELLEMENT: Abrogation partielle
+        - MODIFIE: Le texte source modifie le texte cible
+        - COMPLETE: Le texte source complète le texte cible
+        - CITE: Le texte source cite le texte cible
+        - APPLIQUE: Le texte source applique le texte cible
+        - PROROGE: Le texte source proroge le texte cible
+        - SUSPEND: Le texte source suspend le texte cible
+        - RATIFIE: Le texte source ratifie le texte cible
+        - CODIFIE: Le texte source codifie le texte cible
+        - CONSOLIDE: Le texte source consolide le texte cible
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - texteSourceId
+                - texteCibleId
+              properties:
+                type:
+                  $ref: '#/components/schemas/TypeRelation'
+                texteSourceId:
+                  type: string
+                  format: uuid
+                  description: ID du texte source
+                texteCibleId:
+                  type: string
+                  format: uuid
+                  description: ID du texte cible
+                articleSourceNum:
+                  type: string
+                  maxLength: 20
+                  description: Numéro d'article source (optionnel)
+                articleCibleNum:
+                  type: string
+                  maxLength: 20
+                  description: Numéro d'article cible (optionnel)
+                description:
+                  type: string
+                  maxLength: 5000
+                  description: Description de la relation
+                dateEffet:
+                  type: string
+                  format: date-time
+                  description: Date d'effet de la relation
+              example:
+                type: "MODIFIE"
+                texteSourceId: "550e8400-e29b-41d4-a716-446655440000"
+                texteCibleId: "550e8400-e29b-41d4-a716-446655440001"
+                articleSourceNum: "Article 5"
+                description: "Modification des dispositions relatives aux sanctions"
+      responses:
+        '201':
+          description: Relation créée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Relation'
+        '400':
+          description: Requête invalide
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                selfReference:
+                  summary: Auto-référence interdite
+                  value:
+                    success: false
+                    error: "Un texte ne peut pas avoir une relation avec lui-même"
+                invalidType:
+                  summary: Type invalide
+                  value:
+                    success: false
+                    error: "Erreur de validation"
+                    details:
+                      - path: ["type"]
+                        message: "Type de relation invalide"
+        '404':
+          description: Texte source ou cible non trouvé
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Relation déjà existante
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /relations/{id}:
+    get:
+      tags:
+        - Relations
+      summary: Récupère une relation par son ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Relation trouvée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Relation'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags:
+        - Relations
+      summary: Met à jour une relation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  $ref: '#/components/schemas/TypeRelation'
+                articleSourceNum:
+                  type: string
+                  maxLength: 20
+                articleCibleNum:
+                  type: string
+                  maxLength: 20
+                description:
+                  type: string
+                  maxLength: 5000
+                dateEffet:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Relation mise à jour
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Relation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags:
+        - Relations
+      summary: Supprime une relation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Relation supprimée
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Relation supprimée avec succès"
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /relations/bulk:
+    post:
+      tags:
+        - Relations
+      summary: Création en masse de relations
+      description: Crée plusieurs relations en une seule requête (max 100)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - relations
+              properties:
+                relations:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - texteSourceId
+                      - texteCibleId
+                    properties:
+                      type:
+                        $ref: '#/components/schemas/TypeRelation'
+                      texteSourceId:
+                        type: string
+                        format: uuid
+                      texteCibleId:
+                        type: string
+                        format: uuid
+                      description:
+                        type: string
+      responses:
+        '201':
+          description: Relations créées
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      created:
+                        type: integer
+                        description: Nombre de relations créées
+                      failed:
+                        type: integer
+                        description: Nombre d'échecs
+                      errors:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            index:
+                              type: integer
+                            error:
+                              type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /relations/texte/{texteId}:
+    get:
+      tags:
+        - Relations
+      summary: Relations d'un texte spécifique
+      description: Retourne toutes les relations où le texte est source ou cible
+      parameters:
+        - name: texteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [source, cible, both]
+            default: both
+      responses:
+        '200':
+          description: Relations du texte
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      asSource:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Relation'
+                        description: Relations où le texte est source
+                      asCible:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Relation'
+                        description: Relations où le texte est cible
+                      summary:
+                        type: object
+                        properties:
+                          totalAsSource:
+                            type: integer
+                          totalAsCible:
+                            type: integer
+                          byType:
+                            type: object
+                            additionalProperties:
+                              type: integer
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /relations/graph:
+    get:
+      tags:
+        - Relations
+      summary: Graphe de relations
+      description: Retourne les données pour visualiser le graphe de relations entre textes
+      parameters:
+        - name: texteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+          description: Centre du graphe (optionnel)
+        - name: depth
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 3
+            default: 1
+          description: Profondeur de traversée
+        - name: types
+          in: query
+          schema:
+            type: array
+            items:
+              $ref: '#/components/schemas/TypeRelation'
+          style: form
+          explode: true
+          description: Types de relations à inclure
+      responses:
+        '200':
+          description: Données du graphe
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      nodes:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              type: string
+                            label:
+                              type: string
+                            nature:
+                              type: string
+                            etat:
+                              type: string
+                      edges:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            source:
+                              type: string
+                            target:
+                              type: string
+                            type:
+                              type: string
+                            label:
+                              type: string

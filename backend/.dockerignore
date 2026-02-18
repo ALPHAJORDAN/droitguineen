@@ -1,0 +1,47 @@
+# Dependencies
+node_modules
+npm-debug.log*
+
+# Build output
+dist
+coverage
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Testing
+tests
+__tests__
+*.test.ts
+*.spec.ts
+
+# Documentation
+*.md
+!README.md
+
+# Git
+.git
+.gitignore
+
+# Docker
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Temp files
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# Uploads (should use volumes)
+uploads/*
+!uploads/.gitkeep

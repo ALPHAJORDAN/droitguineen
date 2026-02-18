@@ -1,0 +1,56 @@
+# ==========================================
+# Root .gitignore - Legifrance-Guinée
+# ==========================================
+
+# Environment files
+.env
+.env.local
+.env.*.local
+!.env.example
+!.env.docker.example
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker volumes (local data)
+data/
+data.ms/
+backups/
+
+# Meilisearch binary
+meilisearch.exe
+meilisearch
+
+# PDF uploads
+pdf/
+
+# Claude Code
+.claude/
+
+# Node modules
+node_modules/
+
+# Credentials
+credentials/
+*.pem
+*.key
+
+# Logs
+logs/
+*.log
+
+# Coverage reports
+coverage/
+
+# Build outputs
+dist/
+build/
+.next/
+out/

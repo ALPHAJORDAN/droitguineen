@@ -1,0 +1,131 @@
+import express, { Application, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import swaggerUi from 'swagger-ui-express';
+import { generalLimiter, searchLimiter, uploadLimiter, exportLimiter, authLimiter } from './middlewares/rateLimiter.middleware';
+import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
+import { requestLogger, logger } from './utils/logger';
+import { swaggerSpec } from './config/swagger';
+
+// Routes
+import authRouter from './routes/auth';
+import loisRouter from './routes/lois';
+import rechercheRouter from './routes/recherche';
+import uploadRouter from './routes/upload';
+import exportRouter from './routes/export';
+import relationsRouter from './routes/relations';
+
+export function createApp(): Application {
+  const app = express();
+
+  // Trust proxy (for rate limiting behind reverse proxy)
+  app.set('trust proxy', 1);
+
+  // Security middlewares
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          scriptSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'blob:'],
+          fontSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          frameAncestors: ["'none'"],
+        },
+      },
+      crossOriginEmbedderPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+    })
+  );
+
+  // CORS configuration
+  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3001';
+  app.use(
+    cors({
+      origin: corsOrigin.split(',').map((o) => o.trim()),
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+      credentials: true,
+      maxAge: 86400, // 24 hours
+    })
+  );
+
+  // Request logging
+  app.use(requestLogger);
+
+  // General rate limiting
+  app.use(generalLimiter);
+
+  // Body parsing
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+  // Health check (before other routes, no rate limiting needed)
+  app.get('/health', (req, res) => {
+    res.json({
+      status: 'ok',
+      timestamp: new Date().toISOString(),
+      uptime: process.uptime(),
+    });
+  });
+
+  // API info
+  app.get('/', (req, res) => {
+    res.json({
+      message: 'Legifrance-Guinee API',
+      version: '1.0.0',
+      documentation: '/docs',
+      endpoints: {
+        auth: '/auth',
+        lois: '/lois',
+        recherche: '/recherche',
+        upload: '/upload',
+        export: '/export',
+        relations: '/relations',
+        health: '/health',
+      },
+    });
+  });
+
+  // Swagger documentation (with relaxed CSP for Swagger UI)
+  app.use(
+    '/docs',
+    (req: Request, res: Response, next: NextFunction) => {
+      res.setHeader(
+        'Content-Security-Policy',
+        "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://validator.swagger.io"
+      );
+      next();
+    },
+    swaggerUi.serve,
+    swaggerUi.setup(swaggerSpec, {
+      customCss: '.swagger-ui .topbar { display: none }',
+      customSiteTitle: 'Legifrance-Guinée API Documentation',
+    })
+  );
+
+  // JSON spec endpoint
+  app.get('/docs/spec.json', (req, res) => {
+    res.json(swaggerSpec);
+  });
+
+  // Routes with specific rate limiters
+  app.use('/auth', authLimiter, authRouter);
+  app.use('/lois', loisRouter);
+  app.use('/recherche', searchLimiter, rechercheRouter);
+  app.use('/upload', uploadLimiter, uploadRouter);
+  app.use('/export', exportLimiter, exportRouter);
+  app.use('/relations', relationsRouter);
+
+  // 404 handler
+  app.use(notFoundHandler);
+
+  // Error handler (must be last)
+  app.use(errorHandler);
+
+  return app;
+}
+
+export default createApp;
