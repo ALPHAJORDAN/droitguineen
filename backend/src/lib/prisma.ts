@@ -6,7 +6,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 // Use explicit DATABASE_URL as fallback
-const databaseUrl = process.env.DATABASE_URL || 'postgres://postgres:admin@localhost:5432/droitdatabase';
+const databaseUrl = process.env.DATABASE_URL || 'postgresql://postgres:admin@localhost:5432/droitdatabase';
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
