@@ -95,7 +95,7 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
             debounceTimerRef.current = setTimeout(() => {
                 setDebouncedQuery(value.trim());
                 setShowSuggestions(true);
-            }, 300);
+            }, 200);
         } else {
             setShowSuggestions(false);
             setDebouncedQuery("");

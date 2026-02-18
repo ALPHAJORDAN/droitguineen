@@ -298,7 +298,7 @@ export async function searchTextes(
         filter: filters.length > 0 ? filters.join(' AND ') : undefined,
         limit: options?.limit ?? 20,
         offset: options?.offset ?? 0,
-        sort: ['datePublication:desc'],
+        // No sort - let Meilisearch rank by relevance (much faster)
         matchingStrategy: 'last',
         showRankingScore: true,
     });

@@ -35,17 +35,18 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     };
 
     const offset = (pageNum - 1) * limitNum;
+    // Fetch slightly more than needed from each index for good merge quality
+    const perIndexLimit = Math.min(limitNum, 15);
 
-    // Fetch full limitNum from BOTH indexes, then merge by ranking score
     const [textesResult, articlesResult] = await Promise.all([
         searchTextes(q as string, {
             ...searchOptions,
-            limit: limitNum,
+            limit: perIndexLimit,
             offset,
         }),
         searchArticles(q as string, {
             ...searchOptions,
-            limit: limitNum,
+            limit: perIndexLimit,
             offset,
         }),
     ]);
