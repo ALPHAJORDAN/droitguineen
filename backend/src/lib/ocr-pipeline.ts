@@ -135,104 +135,151 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
 
             // Import dynamique des modules OCR
             const { extractPdfPagesAsImages } = await import('./pdf-to-image');
-            const { isVisionAvailable, processPagesWithVision } = await import('./google-vision-ocr');
+            const { isVisionAvailable, processPagesWithVision, processPdfWithVision } = await import('./google-vision-ocr');
             const { checkQuotaAvailable, trackQuotaUsage } = await import('./quota-tracker');
 
-            // Convertir le PDF en images page par page
-            log.info('Converting PDF to images');
-            const pageImages = await extractPdfPagesAsImages(filePath, {
-                scale: 2.0,
-                onProgress: (current, total) => {
-                    log.debug('PDF page conversion progress', { current, total });
-                }
-            });
+            // Essayer de convertir le PDF en images page par page
+            let pageImages: Awaited<ReturnType<typeof extractPdfPagesAsImages>> = [];
+            let imageExtractionFailed = false;
 
-            log.info('PDF pages converted', { count: pageImages.length });
+            try {
+                log.info('Converting PDF to images');
+                pageImages = await extractPdfPagesAsImages(filePath, {
+                    scale: 2.0,
+                    onProgress: (current, total) => {
+                        log.debug('PDF page conversion progress', { current, total });
+                    }
+                });
+                log.info('PDF pages converted', { count: pageImages.length });
+            } catch (imageError) {
+                log.warn('PDF to image conversion failed, will try direct PDF processing', {
+                    error: (imageError as Error).message
+                });
+                imageExtractionFailed = true;
+            }
 
             let ocrSuccess = false;
 
-            // Essayer Google Cloud Vision en premier
-            if (isVisionAvailable() && checkQuotaAvailable()) {
+            // Stratégie A : Si les images ont été extraites, les envoyer à Vision ou Tesseract
+            if (!imageExtractionFailed && pageImages.length > 0) {
+                // Essayer Google Cloud Vision avec images
+                if (isVisionAvailable() && checkQuotaAvailable()) {
+                    try {
+                        log.info('Processing images with Google Cloud Vision API');
+                        method = 'ocr';
+
+                        const visionResults = await processPagesWithVision(
+                            pageImages,
+                            (current, total) => {
+                                log.debug('Vision OCR progress', { current, total });
+                            }
+                        );
+
+                        trackQuotaUsage(pageImages.length);
+
+                        const pageConfidences: number[] = [];
+                        for (const result of visionResults) {
+                            pages.push({
+                                pageNumber: result.pageNumber,
+                                text: result.text,
+                                confidence: result.confidence,
+                                method: 'ocr'
+                            });
+                            totalText += result.text + '\n\n';
+                            pageConfidences.push(result.confidence);
+                        }
+
+                        totalConfidence = pageConfidences.length > 0
+                            ? pageConfidences.reduce((a, b) => a + b, 0) / pageConfidences.length
+                            : 0;
+
+                        log.info('Google Vision OCR completed', { confidence: totalConfidence.toFixed(1) });
+                        ocrSuccess = totalText.trim().length > 0;
+                    } catch (visionError) {
+                        log.error('Google Cloud Vision OCR failed', visionError as Error);
+                    }
+                }
+
+                // Fallback Tesseract.js avec images
+                if (!ocrSuccess) {
+                    try {
+                        log.info('Falling back to Tesseract.js OCR');
+                        const { createWorker } = await import('tesseract.js');
+
+                        const worker = await createWorker('fra');
+                        method = 'ocr';
+                        totalText = '';
+                        pages.length = 0;
+                        const pageConfidences: number[] = [];
+
+                        for (const pageImage of pageImages) {
+                            log.debug('Tesseract OCR progress', { page: pageImage.pageNumber, total: pageImages.length });
+                            const { data } = await worker.recognize(pageImage.imageBuffer);
+                            pages.push({
+                                pageNumber: pageImage.pageNumber,
+                                text: data.text,
+                                confidence: data.confidence,
+                                method: 'ocr'
+                            });
+                            totalText += data.text + '\n\n';
+                            pageConfidences.push(data.confidence);
+                        }
+
+                        await worker.terminate();
+
+                        totalConfidence = pageConfidences.length > 0
+                            ? pageConfidences.reduce((a, b) => a + b, 0) / pageConfidences.length
+                            : 0;
+
+                        log.info('Tesseract.js OCR completed', { confidence: totalConfidence.toFixed(1) });
+                        ocrSuccess = totalText.trim().length > 0;
+                    } catch (tesseractError) {
+                        log.error('Tesseract.js OCR failed', tesseractError as Error);
+                    }
+                }
+            }
+
+            // Stratégie B : Envoyer le PDF directement à Google Vision (quand les images n'ont pas pu être extraites)
+            if (!ocrSuccess && isVisionAvailable() && checkQuotaAvailable()) {
                 try {
-                    log.info('Processing with Google Cloud Vision API');
+                    log.info('Processing PDF directly with Google Cloud Vision (no image conversion)');
                     method = 'ocr';
 
-                    const visionResults = await processPagesWithVision(
-                        pageImages,
+                    const visionResults = await processPdfWithVision(
+                        dataBuffer,
+                        numPages,
                         (current, total) => {
-                            log.debug('Vision OCR progress', { current, total });
+                            log.debug('Vision direct PDF progress', { current, total });
                         }
                     );
 
-                    // Traquer l'utilisation du quota
-                    trackQuotaUsage(pageImages.length);
+                    trackQuotaUsage(numPages);
 
-                    // Compiler les résultats
                     const pageConfidences: number[] = [];
-
                     for (const result of visionResults) {
-                        pages.push({
-                            pageNumber: result.pageNumber,
-                            text: result.text,
-                            confidence: result.confidence,
-                            method: 'ocr'
-                        });
-
-                        totalText += result.text + '\n\n';
-                        pageConfidences.push(result.confidence);
+                        if (result.text.trim().length > 0) {
+                            pages.push({
+                                pageNumber: result.pageNumber,
+                                text: result.text,
+                                confidence: result.confidence,
+                                method: 'ocr'
+                            });
+                            totalText += result.text + '\n\n';
+                            pageConfidences.push(result.confidence);
+                        }
                     }
 
                     totalConfidence = pageConfidences.length > 0
                         ? pageConfidences.reduce((a, b) => a + b, 0) / pageConfidences.length
                         : 0;
 
-                    log.info('Google Vision OCR completed', { confidence: totalConfidence.toFixed(1) });
+                    log.info('Google Vision direct PDF OCR completed', {
+                        confidence: totalConfidence.toFixed(1),
+                        pagesExtracted: pages.length
+                    });
                     ocrSuccess = totalText.trim().length > 0;
                 } catch (visionError) {
-                    log.error('Google Cloud Vision OCR failed', visionError as Error);
-                }
-            } else {
-                log.info('Google Cloud Vision unavailable or quota exceeded');
-            }
-
-            // Fallback Tesseract.js si Vision n'a pas fonctionné
-            if (!ocrSuccess) {
-                try {
-                    log.info('Falling back to Tesseract.js OCR');
-                    const { createWorker } = await import('tesseract.js');
-
-                    const worker = await createWorker('fra');
-                    method = 'ocr';
-                    totalText = '';
-                    pages.length = 0;
-                    const pageConfidences: number[] = [];
-
-                    for (const pageImage of pageImages) {
-                        log.debug('Tesseract OCR progress', { page: pageImage.pageNumber, total: pageImages.length });
-
-                        const { data } = await worker.recognize(pageImage.imageBuffer);
-
-                        pages.push({
-                            pageNumber: pageImage.pageNumber,
-                            text: data.text,
-                            confidence: data.confidence,
-                            method: 'ocr'
-                        });
-
-                        totalText += data.text + '\n\n';
-                        pageConfidences.push(data.confidence);
-                    }
-
-                    await worker.terminate();
-
-                    totalConfidence = pageConfidences.length > 0
-                        ? pageConfidences.reduce((a, b) => a + b, 0) / pageConfidences.length
-                        : 0;
-
-                    log.info('Tesseract.js OCR completed', { confidence: totalConfidence.toFixed(1) });
-                    ocrSuccess = totalText.trim().length > 0;
-                } catch (tesseractError) {
-                    log.error('Tesseract.js OCR failed', tesseractError as Error);
+                    log.error('Google Cloud Vision direct PDF OCR failed', visionError as Error);
                 }
             }
 

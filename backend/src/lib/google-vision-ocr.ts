@@ -199,6 +199,82 @@ export async function processImageFileWithVision(
     return processImageWithVision(imageBuffer);
 }
 
+/**
+ * Traiter un PDF directement avec Google Cloud Vision (sans conversion en images)
+ * Utilise batchAnnotateFiles qui accepte les PDF nativement.
+ * Limite : 5 pages par requête, donc on découpe en lots.
+ */
+export async function processPdfWithVision(
+    pdfBuffer: Buffer,
+    totalPages: number,
+    onProgress?: (current: number, total: number) => void
+): Promise<Array<{ pageNumber: number; text: string; confidence: number }>> {
+    if (!visionClient) {
+        visionClient = initVisionClient();
+    }
+
+    if (!visionClient) {
+        throw new Error('Google Cloud Vision client non disponible');
+    }
+
+    const results: Array<{ pageNumber: number; text: string; confidence: number }> = [];
+    const PAGES_PER_BATCH = 5; // Google Vision limit per request
+
+    for (let batchStart = 1; batchStart <= totalPages; batchStart += PAGES_PER_BATCH) {
+        const batchEnd = Math.min(batchStart + PAGES_PER_BATCH - 1, totalPages);
+        const pageNumbers = Array.from(
+            { length: batchEnd - batchStart + 1 },
+            (_, i) => batchStart + i
+        );
+
+        if (onProgress) {
+            onProgress(batchStart, totalPages);
+        }
+
+        try {
+            const [response] = await visionClient.batchAnnotateFiles({
+                requests: [{
+                    inputConfig: {
+                        content: pdfBuffer.toString('base64'),
+                        mimeType: 'application/pdf',
+                    },
+                    features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
+                    pages: pageNumbers,
+                }]
+            });
+
+            const fileResponse = response.responses?.[0];
+            if (fileResponse?.responses) {
+                for (let i = 0; i < fileResponse.responses.length; i++) {
+                    const pageResponse = fileResponse.responses[i];
+                    const fullTextAnnotation = pageResponse?.fullTextAnnotation;
+                    const text = fullTextAnnotation?.text || '';
+
+                    // Calculate confidence from pages
+                    let confidence = 95;
+                    if (fullTextAnnotation?.pages?.[0]?.confidence) {
+                        confidence = fullTextAnnotation.pages[0].confidence * 100;
+                    }
+
+                    results.push({
+                        pageNumber: batchStart + i,
+                        text,
+                        confidence
+                    });
+                }
+            }
+        } catch (error: any) {
+            log.error(`Vision PDF batch failed for pages ${batchStart}-${batchEnd}`, error as Error);
+            // Add empty results for failed pages
+            for (const pageNum of pageNumbers) {
+                results.push({ pageNumber: pageNum, text: '', confidence: 0 });
+            }
+        }
+    }
+
+    return results;
+}
+
 // Initialiser le client au chargement du module
 if (GOOGLE_VISION_ENABLED) {
     initVisionClient();
@@ -209,5 +285,6 @@ export default {
     isVisionAvailable,
     processImageWithVision,
     processPagesWithVision,
-    processImageFileWithVision
+    processImageFileWithVision,
+    processPdfWithVision
 };

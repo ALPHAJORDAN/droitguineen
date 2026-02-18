@@ -98,18 +98,26 @@ export async function extractPdfPagesAsImages(
 
         const pageImages: PDFPageImage[] = [];
 
-        // Traiter chaque page
+        // Traiter chaque page (avec try-catch individuel pour résilience)
         for (let pageNum = 1; pageNum <= numPages; pageNum++) {
             if (onProgress) {
                 onProgress(pageNum, numPages);
             }
 
-            const page = await pdfDocument.getPage(pageNum);
-            const pageImage = await convertPdfPageToImage(page, pageNum, scale);
-            pageImages.push(pageImage);
+            try {
+                const page = await pdfDocument.getPage(pageNum);
+                const pageImage = await convertPdfPageToImage(page, pageNum, scale);
+                pageImages.push(pageImage);
 
-            // Libérer la mémoire de la page
-            page.cleanup();
+                // Libérer la mémoire de la page
+                page.cleanup();
+            } catch (pageError) {
+                log.warn(`Failed to convert page ${pageNum}, skipping`, { error: (pageError as Error).message });
+            }
+        }
+
+        if (pageImages.length === 0) {
+            throw new Error('Aucune page n\'a pu être convertie en image');
         }
 
         // Nettoyer le document
