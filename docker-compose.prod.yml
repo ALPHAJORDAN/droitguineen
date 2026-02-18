@@ -17,7 +17,7 @@ services:
       context: ./frontend
       target: production
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.legifrance-guinee.gn}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.droitguineen.gn}
     ports:
       - "3000:3000"
     environment:
@@ -200,4 +200,4 @@ volumes:
 # ----------------------------------------
 networks:
   default:
-    name: legifrance-prod-network
+    name: droitguineen-prod-network

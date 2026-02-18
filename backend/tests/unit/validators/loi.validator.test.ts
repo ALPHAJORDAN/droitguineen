@@ -31,7 +31,7 @@ describe('Loi Validators', () => {
       const fullLoi = {
         cid: 'LEGITEXT000123456789',
         nor: 'ABCD1234567X',
-        eli: 'https://legifrance-guinee.gn/eli/loi/2024/123',
+        eli: 'https://droitguineen.gn/eli/loi/2024/123',
         titre: 'Loi organique relative à la justice',
         titreComplet: 'Loi organique n°2024-123 relative à la justice',
         nature: 'LOI_ORGANIQUE',

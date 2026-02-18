@@ -591,7 +591,7 @@ export async function exportToDOCX(
                         new Paragraph({
                             children: [
                                 new TextRun({
-                                    text: 'Legifrance-Guinée',
+                                    text: 'Droitguinéen',
                                     italics: true,
                                     size: 18,
                                     color: '999999'

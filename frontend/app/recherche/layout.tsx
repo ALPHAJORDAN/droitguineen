@@ -4,7 +4,7 @@ export const metadata: Metadata = {
     title: "Recherche",
     description: "Recherchez dans l'ensemble des textes juridiques de la République de Guinée : lois, décrets, ordonnances, arrêtés, codes et jurisprudence.",
     openGraph: {
-        title: "Recherche - Legifrance-Guinée",
+        title: "Recherche - Droitguinéen",
         description: "Recherchez dans l'ensemble des textes juridiques guinéens",
     },
 };

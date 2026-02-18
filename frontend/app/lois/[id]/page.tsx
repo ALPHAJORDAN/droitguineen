@@ -16,7 +16,7 @@ export async function generateMetadata({
 
         return {
             title: texte.titre,
-            description: `${natureLabel} - ${texte.titre}. ${texte.numero ? `N° ${texte.numero}.` : ""} Consultez le texte intégral sur Legifrance-Guinée.`,
+            description: `${natureLabel} - ${texte.titre}. ${texte.numero ? `N° ${texte.numero}.` : ""} Consultez le texte intégral sur Droitguinéen.`,
             openGraph: {
                 title: texte.titre,
                 description: `${natureLabel} de la République de Guinée`,

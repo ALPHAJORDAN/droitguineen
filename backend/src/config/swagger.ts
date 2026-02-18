@@ -4,10 +4,10 @@ const options: swaggerJsdoc.Options = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Legifrance-Guinée API',
+      title: 'Droitguinéen API',
       version: '1.0.0',
       description: `
-API REST pour la plateforme juridique Legifrance-Guinée.
+API REST pour la plateforme juridique Droitguinéen.
 
 Cette API permet de:
 - Consulter et rechercher les textes juridiques guinéens
@@ -38,7 +38,7 @@ Inclure le token dans le header : \`Authorization: Bearer <token>\`
       `,
       contact: {
         name: 'Support Technique',
-        email: 'support@legifrance-guinee.gn',
+        email: 'support@droitguineen.gn',
       },
       license: {
         name: 'MIT',
@@ -51,7 +51,7 @@ Inclure le token dans le header : \`Authorization: Bearer <token>\`
         description: 'Serveur de développement',
       },
       {
-        url: 'https://api.legifrance-guinee.gn',
+        url: 'https://api.droitguineen.gn',
         description: 'Serveur de production',
       },
     ],

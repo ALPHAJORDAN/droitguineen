@@ -31,7 +31,7 @@ const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
 export function ThemeProvider({
     children,
     defaultTheme = "system",
-    storageKey = "legifrance-guinee-theme",
+    storageKey = "droitguineen-theme",
     attribute = "class",
     enableSystem = true,
     disableTransitionOnChange = true,

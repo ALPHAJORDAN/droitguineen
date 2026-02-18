@@ -10,7 +10,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: 'https',
-        hostname: '**.legifrance-guinee.gn',
+        hostname: '**.droitguineen.gn',
       },
     ],
     formats: ['image/avif', 'image/webp'],

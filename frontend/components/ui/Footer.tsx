@@ -11,7 +11,7 @@ export function Footer() {
                     <div className="space-y-4">
                         <Link href="/" className="flex items-center gap-2">
                             <Image src="/logo.png" alt="Logo" width={28} height={28} className="object-contain" />
-                            <span className="font-semibold">Legifrance-Guinée</span>
+                            <span className="font-semibold">Droitguinéen</span>
                         </Link>
                         <p className="text-sm text-muted-foreground leading-relaxed">
                             Plateforme de référence pour l&apos;accès au droit guinéen. Consultation libre des textes législatifs et réglementaires.
@@ -68,7 +68,7 @@ export function Footer() {
                         <ul className="space-y-2 text-sm text-muted-foreground">
                             <li className="inline-flex items-center gap-1.5">
                                 <Mail className="h-3.5 w-3.5" />
-                                support@legifrance-guinee.gn
+                                support@droitguineen.gn
                             </li>
                         </ul>
                         <p className="text-xs text-muted-foreground leading-relaxed">
@@ -82,7 +82,7 @@ export function Footer() {
             <div className="border-t">
                 <div className="container px-4 md:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 py-4">
                     <p className="text-xs text-muted-foreground">
-                        &copy; {new Date().getFullYear()} Legifrance-Guinée. Tous droits réservés.
+                        &copy; {new Date().getFullYear()} Droitguinéen. Tous droits réservés.
                     </p>
                     <p className="text-xs text-muted-foreground">
                         Construit pour la transparence juridique en Guinée.

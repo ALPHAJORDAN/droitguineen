@@ -74,7 +74,7 @@ export function createApp(): Application {
   // API info
   app.get('/', (req, res) => {
     res.json({
-      message: 'Legifrance-Guinee API',
+      message: 'Droitguinéen API',
       version: '1.0.0',
       documentation: '/docs',
       endpoints: {
@@ -102,7 +102,7 @@ export function createApp(): Application {
     swaggerUi.serve,
     swaggerUi.setup(swaggerSpec, {
       customCss: '.swagger-ui .topbar { display: none }',
-      customSiteTitle: 'Legifrance-Guinée API Documentation',
+      customSiteTitle: 'Droitguinéen API Documentation',
     })
   );
 

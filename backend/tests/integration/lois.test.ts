@@ -35,7 +35,7 @@ describe('API Base Routes', () => {
         .get('/')
         .expect(200);
 
-      expect(response.body.message).toContain('Legifrance');
+      expect(response.body.message).toContain('Droitguin');
       expect(response.body.version).toBe('1.0.0');
       expect(response.body.endpoints).toBeDefined();
       expect(response.body.endpoints.lois).toBe('/lois');

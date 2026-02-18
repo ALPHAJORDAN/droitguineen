@@ -69,12 +69,12 @@ function LoginPageContent() {
                     <Link href="/" className="inline-flex items-center gap-3 mb-6">
                         <Image
                             src="/logo.png"
-                            alt="Legifrance-Guinée"
+                            alt="Droitguinéen"
                             width={48}
                             height={48}
                             className="object-contain"
                         />
-                        <span className="text-2xl font-bold">Legifrance-Guinée</span>
+                        <span className="text-2xl font-bold">Droitguinéen</span>
                     </Link>
                     <h1 className="text-xl font-semibold">Connexion</h1>
                     <p className="text-sm text-muted-foreground mt-1">

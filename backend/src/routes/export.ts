@@ -220,7 +220,7 @@ router.get('/json/:id', asyncHandler(async (req: Request, res: Response) => {
             citePar: texte.relationsCible.filter(r => r.type === 'CITE')
         },
         exportedAt: new Date().toISOString(),
-        source: 'Legifrance-Guinée'
+        source: 'Droitguinéen'
     };
 
     const filename = safeFilename(texte.titre);
@@ -371,7 +371,7 @@ function generateHTML(texte: {
     ${texte.signataires ? `<div class="signataires">${escapeHtml(texte.signataires).replace(/\n/g, '<br>')}</div>` : ''}
 
     <div class="footer">
-        <p>Document exporté depuis Legifrance-Guinée</p>
+        <p>Document exporté depuis Droitguinéen</p>
         <p>Date d'export : ${new Date().toLocaleDateString('fr-FR')}</p>
     </div>
 </body>

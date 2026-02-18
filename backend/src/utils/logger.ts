@@ -18,7 +18,7 @@ export const logger = pino({
     : undefined,
   base: {
     env: process.env.NODE_ENV || 'development',
-    service: 'legifrance-guinee-api',
+    service: 'droitguineen-api',
   },
   redact: {
     paths: [

@@ -2,7 +2,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: "Administration",
-    description: "Espace d'administration pour la gestion des documents juridiques de Legifrance-Guinée. Importez et gérez les textes de loi.",
+    description: "Espace d'administration pour la gestion des documents juridiques de Droitguinéen. Importez et gérez les textes de loi.",
     robots: {
         index: false,
         follow: false,

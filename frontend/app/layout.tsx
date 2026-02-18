@@ -10,15 +10,15 @@ const fontSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://legifrance-guinee.gn"),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://droitguineen.gn"),
   title: {
-    default: "Legifrance-Guinée - Portail du Droit Guinéen",
-    template: "%s | Legifrance-Guinée",
+    default: "Droitguinéen - Portail du Droit Guinéen",
+    template: "%s | Droitguinéen",
   },
   description: "Portail officiel du droit guinéen : Lois, Décrets, Ordonnances, Arrêtés et Journal Officiel de la République de Guinée. Accédez facilement à l'ensemble des textes juridiques guinéens.",
   keywords: ["Guinée", "droit", "lois", "décrets", "ordonnances", "journal officiel", "code civil", "code pénal", "législation", "réglementation"],
-  authors: [{ name: "Legifrance-Guinée" }],
-  creator: "Legifrance-Guinée",
+  authors: [{ name: "Droitguinéen" }],
+  creator: "Droitguinéen",
   publisher: "République de Guinée",
   icons: {
     icon: "/logo.png",
@@ -27,22 +27,22 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_GN",
-    url: "https://legifrance-guinee.gn",
-    siteName: "Legifrance-Guinée",
-    title: "Legifrance-Guinée - Portail du Droit Guinéen",
+    url: "https://droitguineen.gn",
+    siteName: "Droitguinéen",
+    title: "Droitguinéen - Portail du Droit Guinéen",
     description: "Accédez facilement aux lois, décrets et au Journal Officiel de la République de Guinée.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Legifrance-Guinée",
+        alt: "Droitguinéen",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Legifrance-Guinée - Portail du Droit Guinéen",
+    title: "Droitguinéen - Portail du Droit Guinéen",
     description: "Accédez facilement aux lois, décrets et au Journal Officiel de la République de Guinée.",
     images: ["/og-image.png"],
   },

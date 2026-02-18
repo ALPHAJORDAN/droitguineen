@@ -3,13 +3,13 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 import { useState, useMemo } from "react";
 import { cn } from "@/lib/utils";
 
-interface LegifranceTreeProps {
+interface LawTreeProps {
     sections: Section[];
     level?: number;
     allArticles?: Article[]; // Tous les articles du texte pour les récupérer par sectionId
 }
 
-export function LegifranceTree({ sections, level = 0, allArticles = [] }: LegifranceTreeProps) {
+export function LawTree({ sections, level = 0, allArticles = [] }: LawTreeProps) {
     if (!sections || sections.length === 0) return null;
 
     return (
@@ -78,7 +78,7 @@ function SectionItem({ section, level, allArticles = [] }: { section: Section; l
 
                     {/* Sub-sections */}
                     {section.enfants && (
-                        <LegifranceTree sections={section.enfants} level={level + 1} allArticles={allArticles} />
+                        <LawTree sections={section.enfants} level={level + 1} allArticles={allArticles} />
                     )}
                 </div>
             )}

@@ -38,7 +38,7 @@ services:
     environment:
       - NODE_ENV=development
       - PORT=4000
-      - DATABASE_URL=postgres://legifrance:${DB_PASSWORD:-devpassword}@postgres:5432/droitdatabase
+      - DATABASE_URL=postgres://droitguineen:${DB_PASSWORD:-devpassword}@postgres:5432/droitdatabase
       - SEARCH_URL=http://meili:7700
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-devmasterkey}
       - CORS_ORIGIN=http://localhost:3001
@@ -65,7 +65,7 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: legifrance
+      POSTGRES_USER: droitguineen
       POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword}
       POSTGRES_DB: droitdatabase
       PGDATA: /var/lib/postgresql/data/pgdata
@@ -74,7 +74,7 @@ services:
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U legifrance -d droitdatabase"]
+      test: ["CMD-SHELL", "pg_isready -U droitguineen -d droitdatabase"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -134,4 +134,4 @@ volumes:
 # ----------------------------------------
 networks:
   default:
-    name: legifrance-network
+    name: droitguineen-network

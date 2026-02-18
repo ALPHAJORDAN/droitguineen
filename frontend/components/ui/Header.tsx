@@ -35,7 +35,7 @@ function HeaderSkeleton() {
                 <div className="mr-2 p-2"><Menu className="h-5 w-5" /></div>
                 <div className="flex items-center space-x-2 mr-6">
                     <div className="w-8 h-8 bg-muted rounded" />
-                    <span className="font-semibold text-lg hidden sm:inline-block">Legifrance-Guinée</span>
+                    <span className="font-semibold text-lg hidden sm:inline-block">Droitguinéen</span>
                 </div>
                 <div className="ml-auto"><ThemeToggle /></div>
             </div>
@@ -91,7 +91,7 @@ function HeaderContent() {
                                     height={32}
                                     className="object-contain"
                                 />
-                                <span className="font-semibold text-base">Legifrance-Guinée</span>
+                                <span className="font-semibold text-base">Droitguinéen</span>
                             </div>
                             <SheetClose className="rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary">
                                 <X className="h-4 w-4" />
@@ -105,12 +105,12 @@ function HeaderContent() {
                 <Link href="/" className="flex items-center space-x-2 mr-6">
                     <Image
                         src="/logo.png"
-                        alt="Legifrance-Guinée Logo"
+                        alt="Droitguinéen Logo"
                         width={32}
                         height={32}
                         className="object-contain"
                     />
-                    <span className="font-semibold text-lg hidden sm:inline-block">Legifrance-Guinée</span>
+                    <span className="font-semibold text-lg hidden sm:inline-block">Droitguinéen</span>
                 </Link>
                 <nav className="hidden md:flex items-center space-x-8 text-sm">
                     <Link
