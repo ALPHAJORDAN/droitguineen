@@ -348,9 +348,14 @@ export function cleanText(rawText: string): string {
         .replace(/\bj\s*'\s*/g, "j'")
         .replace(/\bc\s*'\s*/g, "c'")
         .replace(/\bm\s*'\s*/g, "m'")
-        // Corriger "Articte" / "Artide" -> "Article"
+        // Corriger "Articte" / "Artide" / "ArtICle" / "ArtiCle" -> "Article"
         .replace(/Articte/gi, 'Article')
         .replace(/Artide/gi, 'Article')
+        .replace(/Art[iI][cC][lL][eE]/g, 'Article')
+        // Fusionner "Article\nN" en "Article N" (scans de mauvaise qualité)
+        .replace(/\b(Article)\s*\n\s*(\d+)/gi, '$1 $2')
+        // Fusionner "ArticleN" (sans espace) en "Article N"
+        .replace(/\b(Article)(\d+)/gi, '$1 $2')
         // Corriger caractères mal reconnus (ligatures)
         .replace(/[ﬁ]/g, 'fi')
         .replace(/[ﬂ]/g, 'fl')
@@ -617,7 +622,7 @@ export function extractStructure(text: string): DocumentStructure {
         // L'en-tête d'article doit commencer au début de la ligne
         // Formats acceptés : "Article 5.", "Article 5 :", "Article 5 -", "Article premier.", "Art. 5."
         // On refuse les lignes qui commencent par des mots avant "Article" (ex: "à l'article 84")
-        const headerMatch = line.match(/^(?:Article|Art\.?)\s+(i+|premier|1er|unique|[\dIVXLCDM]+)\s*([.:\-]?\s*)(.*)?$/i);
+        const headerMatch = line.match(/^(?:Article|Art\.?)\s+(i+|premier|1er|unique|[\dIVXLCDM]+)\s*([.:\-–]?\s*)(.*)?$/i);
         if (!headerMatch) continue;
 
         // Vérification supplémentaire : si la ligne précédente se termine par un mot comme
