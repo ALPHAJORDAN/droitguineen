@@ -66,7 +66,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
     const exportMenuRef = useRef<HTMLDivElement>(null);
 
     const isAdmin = user?.role === "ADMIN" || user?.role === "EDITOR";
-    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
     // Close export menu on outside click
     useEffect(() => {

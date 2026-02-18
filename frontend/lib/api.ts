@@ -257,13 +257,8 @@ export async function fetchLois(options?: {
     if (!res.ok) throw new Error('Failed to fetch lois');
     const response = await res.json();
     return {
-        data: response.textes,
-        pagination: {
-            page: options?.page || 1,
-            limit: options?.limit || 20,
-            total: response.total,
-            totalPages: Math.ceil(response.total / (options?.limit || 20))
-        }
+        data: response.data,
+        pagination: response.pagination,
     };
 }
 
