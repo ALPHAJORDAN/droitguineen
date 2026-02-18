@@ -314,15 +314,100 @@ export async function deleteFile(id: string): Promise<void> {
     if (!res.ok) throw new Error('Failed to delete file');
 }
 
-export async function uploadPdf(
-    file: File,
+// ============ Upload Preview/Confirm Types ============
+
+export interface UploadPreviewResponse {
+    filePath: string;
+    extractionMethod: 'native' | 'ocr';
     metadata: {
         titre?: string;
         nature?: string;
-        sousCategorie?: string;
+        numero?: string;
         dateSignature?: string;
-        datePublication?: string;
+    };
+    textPreview: string;
+    articles: Array<{ numero: string; contenu: string }>;
+    sections: unknown[];
+    isCode: boolean;
+    articlesCount: number;
+    fullTextLength: number;
+}
+
+export interface UploadMetadata {
+    titre?: string;
+    nature?: string;
+    sousCategorie?: string;
+    numero?: string;
+    dateSignature?: string;
+    datePublication?: string;
+    sourceJO?: string;
+}
+
+/**
+ * Upload PDF for preview (no DB save). Returns extracted data for review.
+ */
+export async function uploadPdfPreview(
+    file: File,
+    metadata: UploadMetadata
+): Promise<UploadPreviewResponse> {
+    const formData = new FormData();
+    formData.append('file', file);
+    // createInDb is NOT set → defaults to false → preview mode
+    if (metadata.titre) formData.append('titre', metadata.titre);
+    if (metadata.nature) formData.append('nature', metadata.nature);
+    if (metadata.sousCategorie) formData.append('sousCategorie', metadata.sousCategorie);
+    if (metadata.numero) formData.append('numero', metadata.numero);
+    if (metadata.dateSignature) formData.append('dateSignature', metadata.dateSignature);
+    if (metadata.datePublication) formData.append('datePublication', metadata.datePublication);
+    if (metadata.sourceJO) formData.append('sourceJO', metadata.sourceJO);
+
+    const res = await authFetch(`${API_BASE_URL}/upload/pdf`, {
+        method: 'POST',
+        body: formData,
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Échec de l\'analyse du PDF');
     }
+    const response = await res.json();
+    return response;
+}
+
+/**
+ * Confirm a previewed upload and save to database.
+ */
+export async function confirmUpload(data: {
+    filePath: string;
+    cid: string;
+    titre: string;
+    nature: string;
+    sousCategorie?: string;
+    numero?: string;
+    dateSignature?: string;
+    datePublication?: string;
+    sourceJO?: string;
+    articles?: Array<{ numero: string; contenu: string }>;
+    sections?: unknown[];
+}): Promise<Texte> {
+    const res = await authFetch(`${API_BASE_URL}/upload/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Échec de l\'enregistrement');
+    }
+    const response = await res.json();
+    return response.data;
+}
+
+/**
+ * Upload PDF and save directly to DB (skips preview).
+ */
+export async function uploadPdf(
+    file: File,
+    metadata: UploadMetadata
 ): Promise<Texte> {
     const formData = new FormData();
     formData.append('file', file);
@@ -330,8 +415,10 @@ export async function uploadPdf(
     if (metadata.titre) formData.append('titre', metadata.titre);
     if (metadata.nature) formData.append('nature', metadata.nature);
     if (metadata.sousCategorie) formData.append('sousCategorie', metadata.sousCategorie);
+    if (metadata.numero) formData.append('numero', metadata.numero);
     if (metadata.dateSignature) formData.append('dateSignature', metadata.dateSignature);
     if (metadata.datePublication) formData.append('datePublication', metadata.datePublication);
+    if (metadata.sourceJO) formData.append('sourceJO', metadata.sourceJO);
 
     const res = await authFetch(`${API_BASE_URL}/upload/pdf`, {
         method: 'POST',
@@ -343,6 +430,123 @@ export async function uploadPdf(
     }
     const response = await res.json();
     return response.data;
+}
+
+/**
+ * Update an existing texte.
+ */
+export async function updateLoi(id: string, data: Partial<{
+    titre: string;
+    titreComplet: string;
+    nature: string;
+    sousCategorie: string;
+    numero: string;
+    etat: string;
+    nor: string;
+    eli: string;
+    dateSignature: string;
+    datePublication: string;
+    dateEntreeVigueur: string;
+    signataires: string;
+    visas: string;
+    sourceJO: string;
+    urlJO: string;
+}>): Promise<Texte> {
+    const res = await authFetch(`${API_BASE_URL}/lois/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Échec de la mise à jour');
+    }
+    const response = await res.json();
+    return response.data;
+}
+
+// ============ User Management Types ============
+
+export interface AdminUser {
+    id: string;
+    email: string;
+    nom: string;
+    prenom: string;
+    role: 'ADMIN' | 'EDITOR' | 'USER';
+    isActive: boolean;
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface PaginatedUsers {
+    data: AdminUser[];
+    total: number;
+    page: number;
+    limit: number;
+}
+
+// ============ User Management API ============
+
+export async function getUsers(page = 1, limit = 20): Promise<PaginatedUsers> {
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    const res = await authFetch(`${API_BASE_URL}/auth/users?${params.toString()}`);
+    if (!res.ok) throw new Error('Échec du chargement des utilisateurs');
+    const response = await res.json();
+    return {
+        data: response.data || [],
+        total: response.total || 0,
+        page: response.page || page,
+        limit: response.limit || limit,
+    };
+}
+
+export async function createUser(data: {
+    email: string;
+    password: string;
+    nom: string;
+    prenom: string;
+    role?: string;
+}): Promise<AdminUser> {
+    const res = await authFetch(`${API_BASE_URL}/auth/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Échec de la création');
+    }
+    const response = await res.json();
+    return response.data;
+}
+
+export async function updateUser(id: string, data: {
+    nom?: string;
+    prenom?: string;
+    role?: string;
+    isActive?: boolean;
+}): Promise<AdminUser> {
+    const res = await authFetch(`${API_BASE_URL}/auth/users/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Échec de la mise à jour');
+    }
+    const response = await res.json();
+    return response.data;
+}
+
+export async function deleteUser(id: string): Promise<void> {
+    const res = await authFetch(`${API_BASE_URL}/auth/users/${id}`, {
+        method: 'DELETE',
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Échec de la suppression');
+    }
 }
 
 // Nature labels for display

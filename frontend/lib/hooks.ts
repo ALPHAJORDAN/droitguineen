@@ -6,6 +6,13 @@ import {
     getFiles,
     deleteFile,
     uploadPdf,
+    uploadPdfPreview,
+    confirmUpload,
+    updateLoi,
+    getUsers,
+    createUser,
+    updateUser,
+    deleteUser,
     getRelations,
     createRelation,
     deleteRelation,
@@ -19,6 +26,10 @@ import {
     PaginatedResponse,
     SearchResponse,
     FileData,
+    UploadPreviewResponse,
+    UploadMetadata,
+    AdminUser,
+    PaginatedUsers,
     RelationsResponse,
     TexteRelation,
     RelationGraph,
@@ -39,6 +50,10 @@ export const queryKeys = {
     files: {
         all: ["files"] as const,
         list: () => [...queryKeys.files.all, "list"] as const,
+    },
+    users: {
+        all: ["users"] as const,
+        list: (page?: number) => [...queryKeys.users.all, "list", page] as const,
     },
     relations: {
         all: ["relations"] as const,
@@ -118,17 +133,92 @@ export function useUploadPdf() {
             metadata,
         }: {
             file: File;
-            metadata: {
-                titre?: string;
-                nature?: string;
-                sousCategorie?: string;
-                dateSignature?: string;
-                datePublication?: string;
-            };
+            metadata: UploadMetadata;
         }) => uploadPdf(file, metadata),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.files.all });
             queryClient.invalidateQueries({ queryKey: queryKeys.lois.all });
+        },
+    });
+}
+
+export function useUploadPdfPreview() {
+    return useMutation({
+        mutationFn: ({
+            file,
+            metadata,
+        }: {
+            file: File;
+            metadata: UploadMetadata;
+        }) => uploadPdfPreview(file, metadata),
+    });
+}
+
+export function useConfirmUpload() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: confirmUpload,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.files.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.lois.all });
+        },
+    });
+}
+
+export function useUpdateLoi() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateLoi>[1] }) =>
+            updateLoi(id, data),
+        onSuccess: (_, { id }) => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.lois.detail(id) });
+            queryClient.invalidateQueries({ queryKey: queryKeys.lois.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.files.all });
+        },
+    });
+}
+
+// ============ Hooks pour les Utilisateurs (Admin) ============
+
+export function useUsers(page = 1, limit = 20) {
+    return useQuery<PaginatedUsers>({
+        queryKey: queryKeys.users.list(page),
+        queryFn: () => getUsers(page, limit),
+    });
+}
+
+export function useCreateUser() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: createUser,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+        },
+    });
+}
+
+export function useUpdateUser() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Parameters<typeof updateUser>[1] }) =>
+            updateUser(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+        },
+    });
+}
+
+export function useDeleteUser() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: deleteUser,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
         },
     });
 }
