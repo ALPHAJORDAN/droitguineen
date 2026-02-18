@@ -14,12 +14,8 @@ import {
     Header,
     Footer,
     PageNumber,
-    NumberFormat,
     convertInchesToTwip,
-    TableOfContents
 } from 'docx';
-import fs from 'fs';
-import path from 'path';
 import { Texte, Article, Section } from '@prisma/client';
 
 export interface ExportOptions {
@@ -65,13 +61,11 @@ export async function exportToPDF(
 
     let currentPage = pdfDoc.addPage(PageSizes.A4);
     let yPosition = pageHeight - margin;
-    let pageNum = 1;
 
     // Helper pour ajouter une nouvelle page
     function addNewPage(): void {
         currentPage = pdfDoc.addPage(PageSizes.A4);
         yPosition = pageHeight - margin;
-        pageNum++;
         
         if (options.includeHeader) {
             currentPage.drawText('RÉPUBLIQUE DE GUINÉE', {
@@ -175,7 +169,7 @@ export async function exportToPDF(
     // Titre du document
     checkSpace(60);
     drawWrappedText(
-        texte.titre.toUpperCase(),
+        (texte.titre || 'Sans titre').toUpperCase(),
         margin,
         pageWidth - 2 * margin,
         timesRomanBold,
@@ -269,7 +263,7 @@ export async function exportToPDF(
             const indentation = level * 20;
             const titleSize = Math.max(fontSize.sectionTitle - level * 2, 10);
             
-            currentPage.drawText(section.titre.toUpperCase(), {
+            currentPage.drawText((section.titre || '').toUpperCase(), {
                 x: margin + indentation,
                 y: yPosition,
                 size: titleSize,
@@ -400,7 +394,7 @@ export async function exportToDOCX(
         new Paragraph({
             children: [
                 new TextRun({
-                    text: texte.titre.toUpperCase(),
+                    text: (texte.titre || 'Sans titre').toUpperCase(),
                     bold: true,
                     size: 32
                 })
@@ -507,7 +501,7 @@ export async function exportToDOCX(
                 new Paragraph({
                     children: [
                         new TextRun({
-                            text: section.titre.toUpperCase(),
+                            text: (section.titre || '').toUpperCase(),
                             bold: true,
                             size: 28 - level * 2,
                             color: '003366'

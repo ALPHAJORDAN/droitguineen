@@ -1,5 +1,6 @@
 import { MeiliSearch, Index } from 'meilisearch';
 import prisma from './prisma';
+import { log } from '../utils/logger';
 
 const SEARCH_URL = process.env.SEARCH_URL || 'http://localhost:7700';
 const MEILI_MASTER_KEY = process.env.MEILI_MASTER_KEY || '';
@@ -67,7 +68,7 @@ export async function initMeiliSearch(): Promise<Index> {
             'sourceJO',
         ]);
 
-        console.log('✅ Meilisearch index "textes" configured successfully');
+        log.info('Meilisearch index "textes" configured successfully');
 
         // === Index articles ===
         await initArticlesIndex();
@@ -77,7 +78,7 @@ export async function initMeiliSearch(): Promise<Index> {
 
         return textesIndex;
     } catch (error) {
-        console.error('❌ Failed to initialize Meilisearch:', error);
+        log.error('Failed to initialize Meilisearch', error as Error);
         throw error;
     }
 }
@@ -129,7 +130,7 @@ async function initArticlesIndex(): Promise<Index> {
         'texteDatePublication',
     ]);
 
-    console.log('✅ Meilisearch index "articles" configured successfully');
+    log.info('Meilisearch index "articles" configured successfully');
     return articlesIndex;
 }
 
@@ -203,6 +204,11 @@ export async function removeArticlesFromIndex(texteId: string): Promise<void> {
     });
 }
 
+/** Escape a value for use in Meilisearch filter strings */
+function sanitizeFilterValue(value: string): string {
+    return value.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
+}
+
 // Fonction de recherche dans les textes
 export async function searchTextes(
     query: string,
@@ -222,22 +228,22 @@ export async function searchTextes(
     const filters: string[] = [];
 
     if (options?.nature) {
-        filters.push(`nature = "${options.nature}"`);
+        filters.push(`nature = "${sanitizeFilterValue(options.nature)}"`);
     }
     if (options?.etat) {
-        filters.push(`etat = "${options.etat}"`);
+        filters.push(`etat = "${sanitizeFilterValue(options.etat)}"`);
     }
     if (options?.dateDebut) {
-        filters.push(`datePublication >= "${options.dateDebut}"`);
+        filters.push(`datePublication >= "${sanitizeFilterValue(options.dateDebut)}"`);
     }
     if (options?.dateFin) {
-        filters.push(`datePublication <= "${options.dateFin}"`);
+        filters.push(`datePublication <= "${sanitizeFilterValue(options.dateFin)}"`);
     }
 
     const result = await meiliClient.index(TEXTES_INDEX_NAME).search(query, {
         filter: filters.length > 0 ? filters.join(' AND ') : undefined,
-        limit: options?.limit || 20,
-        offset: options?.offset || 0,
+        limit: options?.limit ?? 20,
+        offset: options?.offset ?? 0,
         sort: ['datePublication:desc'],
     });
 
@@ -267,22 +273,22 @@ export async function searchArticles(
     const filters: string[] = [];
 
     if (options?.nature) {
-        filters.push(`texteNature = "${options.nature}"`);
+        filters.push(`texteNature = "${sanitizeFilterValue(options.nature)}"`);
     }
     if (options?.etat) {
-        filters.push(`texteEtat = "${options.etat}"`);
+        filters.push(`texteEtat = "${sanitizeFilterValue(options.etat)}"`);
     }
     if (options?.dateDebut) {
-        filters.push(`texteDatePublication >= "${options.dateDebut}"`);
+        filters.push(`texteDatePublication >= "${sanitizeFilterValue(options.dateDebut)}"`);
     }
     if (options?.dateFin) {
-        filters.push(`texteDatePublication <= "${options.dateFin}"`);
+        filters.push(`texteDatePublication <= "${sanitizeFilterValue(options.dateFin)}"`);
     }
 
     const result = await meiliClient.index(ARTICLES_INDEX_NAME).search(query, {
         filter: filters.length > 0 ? filters.join(' AND ') : undefined,
-        limit: options?.limit || 10,
-        offset: options?.offset || 0,
+        limit: options?.limit ?? 10,
+        offset: options?.offset ?? 0,
         attributesToHighlight: ['contenu'],
         highlightPreTag: '<mark>',
         highlightPostTag: '</mark>',
@@ -306,7 +312,7 @@ async function reindexAllArticlesIfEmpty(): Promise<void> {
             return; // Already has documents
         }
 
-        console.log('📝 Articles index is empty, reindexing existing articles...');
+        log.info('Articles index is empty, reindexing existing articles...');
 
         const textes = await prisma.texte.findMany({
             include: {
@@ -324,9 +330,9 @@ async function reindexAllArticlesIfEmpty(): Promise<void> {
             }
         }
 
-        console.log(`✅ Reindexed ${totalArticles} articles from ${textes.length} textes`);
+        log.info('Reindexed articles', { totalArticles, totalTextes: textes.length });
     } catch (error) {
-        console.warn('⚠️ Failed to reindex articles:', error);
+        log.warn('Failed to reindex articles', { err: error });
     }
 }
 

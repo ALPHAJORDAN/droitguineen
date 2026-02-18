@@ -20,18 +20,8 @@ import { EditModal } from "@/components/admin/EditModal";
 import { ToastProvider } from "@/components/admin/Toast";
 import { useAuth } from "@/lib/auth";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { cn } from "@/lib/utils";
+import { cn, formatDate, ETAT_STYLES } from "@/lib/utils";
 import Script from "next/script";
-
-function formatDate(dateString?: string): string {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-    });
-}
 
 const NATURE_ICONS: Record<string, React.ReactNode> = {
     LOI: <Scale className="h-6 w-6" />,
@@ -41,15 +31,6 @@ const NATURE_ICONS: Record<string, React.ReactNode> = {
     DECRET: <FileCheck className="h-6 w-6" />,
     CODE: <BookOpen className="h-6 w-6" />,
     ARRETE: <FileText className="h-6 w-6" />,
-};
-
-const ETAT_STYLES: Record<string, string> = {
-    VIGUEUR: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-    VIGUEUR_DIFF: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-    MODIFIE: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-    ABROGE: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-    ABROGE_DIFF: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
-    PERIME: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
 export function LawDetailsClient({ id, initialData }: { id: string; initialData?: Texte }) {

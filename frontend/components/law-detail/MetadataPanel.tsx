@@ -1,21 +1,12 @@
 "use client";
 
 import { Texte, ETAT_LABELS } from "@/lib/api";
+import { formatDate } from "@/lib/utils";
 import {
     Calendar, Hash, FileText, ExternalLink, Download,
     User, BookMarked, Shield, Tag,
 } from "lucide-react";
 import { useState } from "react";
-
-function formatDate(dateString?: string): string {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toLocaleDateString("fr-FR", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-    });
-}
 
 function CopyableValue({ label, value }: { label: string; value: string }) {
     const [copied, setCopied] = useState(false);

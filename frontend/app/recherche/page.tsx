@@ -15,7 +15,7 @@ import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSearch, useLois } from "@/lib/hooks";
 import { NATURE_LABELS, ETAT_LABELS, Texte, ArticleHit, SearchHit } from "@/lib/api";
-import { formatDate } from "@/lib/utils";
+import { formatDate, ETAT_STYLES } from "@/lib/utils";
 
 // Map frontend type filters to backend nature values
 const TYPE_TO_NATURE: Record<string, string> = {
@@ -48,15 +48,6 @@ const NATURE_ICONS: Record<string, React.ReactNode> = {
     TRAITE: <ScrollText className="h-5 w-5" />,
     CODE: <BookOpen className="h-5 w-5" />,
     JURISPRUDENCE: <Gavel className="h-5 w-5" />,
-};
-
-const ETAT_STYLES: Record<string, string> = {
-    VIGUEUR: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-    VIGUEUR_DIFF: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
-    MODIFIE: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-    ABROGE: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
-    ABROGE_DIFF: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400",
-    PERIME: "bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
 // Filter categories for the sidebar
@@ -94,14 +85,6 @@ function useSearchFilters() {
         order: (searchParams.get("order") || "desc") as "asc" | "desc",
         page: parseInt(searchParams.get("page") || "1", 10),
     };
-}
-
-function buildParams(filters: Record<string, string | null | undefined>): URLSearchParams {
-    const params = new URLSearchParams();
-    for (const [key, value] of Object.entries(filters)) {
-        if (value) params.set(key, value);
-    }
-    return params;
 }
 
 function TexteCard({ texte }: { texte: Texte }) {
@@ -154,11 +137,16 @@ function TexteCard({ texte }: { texte: Texte }) {
     );
 }
 
+/** Strip all HTML tags except <mark> to prevent XSS from Meilisearch content */
+function sanitizeHighlight(html: string): string {
+    return html.replace(/<\/?(?!mark\b)[^>]+>/gi, '');
+}
+
 function ArticleCard({ article }: { article: ArticleHit }) {
     const highlightedContent = article._formatted?.contenu || article.contenu;
     // Truncate plain content for display (highlighted content is already cropped by Meilisearch)
     const displayContent = article._formatted?.contenu
-        ? highlightedContent
+        ? sanitizeHighlight(highlightedContent)
         : (article.contenu.length > 300 ? article.contenu.slice(0, 300) + "..." : article.contenu);
 
     return (
@@ -205,7 +193,7 @@ function ArticleCard({ article }: { article: ArticleHit }) {
     );
 }
 
-function SearchResults() {
+function SearchResultsWithPagination() {
     const filters = useSearchFilters();
     const nature = filters.type ? TYPE_TO_NATURE[filters.type] : undefined;
 
@@ -296,65 +284,41 @@ function SearchResults() {
     const end = Math.min(filters.page * 20, pagination?.total || 0);
 
     return (
-        <div className="space-y-4">
-            {pagination && (
-                <div className="flex items-center justify-between">
-                    <p className="text-sm text-muted-foreground">
-                        {pagination.total} resultat{pagination.total > 1 ? "s" : ""}
-                        {pagination.total > 20 && (
-                            <span> &middot; Affichage {start}-{end}</span>
-                        )}
-                        {isSearching && searchQuery.data?.processingTimeMs && (
-                            <span> &middot; {searchQuery.data.processingTimeMs}ms</span>
-                        )}
-                    </p>
-                </div>
-            )}
+        <>
+            <div className="space-y-4">
+                {pagination && (
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">
+                            {pagination.total} resultat{pagination.total > 1 ? "s" : ""}
+                            {pagination.total > 20 && (
+                                <span> &middot; Affichage {start}-{end}</span>
+                            )}
+                            {isSearching && searchQuery.data?.processingTimeMs && (
+                                <span> &middot; {searchQuery.data.processingTimeMs}ms</span>
+                            )}
+                        </p>
+                    </div>
+                )}
 
-            {searchHits.map((hit) =>
-                hit.type === 'article' ? (
-                    <ArticleCard key={`article-${hit.id}`} article={hit} />
-                ) : (
-                    <TexteCard key={`texte-${hit.id}`} texte={hit} />
-                )
-            )}
-        </div>
+                {searchHits.map((hit) =>
+                    hit.type === 'article' ? (
+                        <ArticleCard key={`article-${hit.id}`} article={hit} />
+                    ) : (
+                        <TexteCard key={`texte-${hit.id}`} texte={hit} />
+                    )
+                )}
+            </div>
+            <Pagination pagination={pagination} />
+        </>
     );
 }
 
-function Pagination() {
+function Pagination({ pagination }: { pagination?: { page: number; totalPages: number } }) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const filters = useSearchFilters();
-    const nature = filters.type ? TYPE_TO_NATURE[filters.type] : undefined;
-
-    const searchQuery = useSearch(filters.query, {
-        nature,
-        etat: filters.etat || undefined,
-        dateDebut: filters.dateDebut || undefined,
-        dateFin: filters.dateFin || undefined,
-        page: filters.page,
-        limit: 20,
-    });
-
-    const listQuery = useLois({
-        nature,
-        etat: filters.etat || undefined,
-        sort: filters.sort,
-        order: filters.order,
-        dateDebut: filters.dateDebut || undefined,
-        dateFin: filters.dateFin || undefined,
-        page: filters.page,
-        limit: 20,
-    });
-
-    const isSearching = filters.query.length > 0;
-    const pagination = isSearching
-        ? searchQuery.data?.pagination
-        : listQuery.data?.pagination;
 
     const totalPages = pagination?.totalPages || 1;
-    const currentPage = filters.page;
+    const currentPage = pagination?.page || 1;
 
     if (totalPages <= 1) return null;
 
@@ -467,7 +431,13 @@ function SearchFilters() {
                     {(filters.dateDebut || filters.dateFin) && (
                         <span className="text-xs font-medium px-3 py-1.5 bg-primary/10 text-primary rounded-full flex items-center gap-1.5">
                             {filters.dateDebut || "..."} - {filters.dateFin || "..."}
-                            <button onClick={() => { updateFilter("dateDebut", null); updateFilter("dateFin", null); }} className="hover:bg-primary/20 rounded-full p-0.5">
+                            <button onClick={() => {
+                                const params = new URLSearchParams(searchParams.toString());
+                                params.delete("dateDebut");
+                                params.delete("dateFin");
+                                params.delete("page");
+                                router.push(`/recherche?${params.toString()}`);
+                            }} className="hover:bg-primary/20 rounded-full p-0.5">
                                 <X className="h-3 w-3" />
                             </button>
                         </span>
@@ -708,11 +678,7 @@ export default function SearchPage() {
                                 </div>
                             }
                         >
-                            <SearchResults />
-                        </Suspense>
-
-                        <Suspense fallback={null}>
-                            <Pagination />
+                            <SearchResultsWithPagination />
                         </Suspense>
                     </main>
                 </div>

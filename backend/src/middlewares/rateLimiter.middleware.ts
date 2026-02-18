@@ -1,8 +1,9 @@
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
 
+const isDev = process.env.NODE_ENV !== 'production';
 const windowMs = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000'); // 15 minutes
-const maxRequests = parseInt(process.env.RATE_LIMIT_MAX || '100');
+const maxRequests = isDev ? 10000 : parseInt(process.env.RATE_LIMIT_MAX || '100');
 
 // Error response format
 const createLimitMessage = (retryAfter: number) => ({
@@ -18,7 +19,6 @@ const createLimitMessage = (retryAfter: number) => ({
 export const generalLimiter = rateLimit({
   windowMs,
   max: maxRequests,
-  message: createLimitMessage(windowMs),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
@@ -31,32 +31,12 @@ export const generalLimiter = rateLimit({
 });
 
 /**
- * Strict rate limiter for sensitive operations
- * 10 requests per hour
- */
-export const strictLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
-  message: createLimitMessage(60 * 60 * 1000),
-  standardHeaders: true,
-  legacyHeaders: false,
-  handler: (req: Request, res: Response) => {
-    res.status(429).json({
-      success: false,
-      error: "Limite d'opérations sensibles atteinte",
-      retryAfter: 3600,
-    });
-  },
-});
-
-/**
  * Upload rate limiter
  * 20 uploads per hour
  */
 export const uploadLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 20,
-  message: createLimitMessage(60 * 60 * 1000),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
@@ -75,7 +55,6 @@ export const uploadLimiter = rateLimit({
 export const searchLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute
   max: 30,
-  message: createLimitMessage(60 * 1000),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {
@@ -94,7 +73,6 @@ export const searchLimiter = rateLimit({
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 10,
-  message: createLimitMessage(15 * 60 * 1000),
   standardHeaders: true,
   legacyHeaders: false,
   handler: (req: Request, res: Response) => {

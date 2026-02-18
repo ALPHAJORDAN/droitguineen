@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma';
-import { TypeRelation, EtatTexte, Prisma } from '@prisma/client';
+import { TypeRelation, EtatTexte } from '@prisma/client';
 import { AppError } from '../middlewares/error.middleware';
 import { log } from '../utils/logger';
 
@@ -122,6 +122,7 @@ class RelationService {
       suspend: relationsSource.filter((r) => r.type === 'SUSPEND'),
       ratifie: relationsSource.filter((r) => r.type === 'RATIFIE'),
       codifie: relationsSource.filter((r) => r.type === 'CODIFIE'),
+      consolide: relationsSource.filter((r) => r.type === 'CONSOLIDE'),
 
       // What others do to this texte
       abrogePar: relationsCible.filter(
@@ -135,6 +136,7 @@ class RelationService {
       suspendPar: relationsCible.filter((r) => r.type === 'SUSPEND'),
       ratifiePar: relationsCible.filter((r) => r.type === 'RATIFIE'),
       codifiePar: relationsCible.filter((r) => r.type === 'CODIFIE'),
+      consolidePar: relationsCible.filter((r) => r.type === 'CONSOLIDE'),
     };
 
     return {
@@ -212,6 +214,11 @@ class RelationService {
    * Update a relation
    */
   async update(id: string, data: UpdateRelationData) {
+    const oldRelation = await prisma.texteRelation.findUnique({ where: { id } });
+    if (!oldRelation) {
+      throw new AppError(404, 'Relation non trouvée');
+    }
+
     const relation = await prisma.texteRelation.update({
       where: { id },
       data: {
@@ -227,6 +234,11 @@ class RelationService {
       },
     });
 
+    // If the relation type changed, recalculate the target texte's state
+    if (data.type && data.type !== oldRelation.type) {
+      await this.recalculateTexteState(oldRelation.texteCibleId);
+    }
+
     log.info('Relation updated', { id });
 
     return relation;
@@ -236,8 +248,46 @@ class RelationService {
    * Delete a relation
    */
   async delete(id: string) {
+    const relation = await prisma.texteRelation.findUnique({ where: { id } });
+    if (!relation) {
+      throw new AppError(404, 'Relation non trouvée');
+    }
+
     await prisma.texteRelation.delete({ where: { id } });
+
+    // Recalculate the target texte's state after removing the relation
+    await this.recalculateTexteState(relation.texteCibleId);
+
     log.info('Relation deleted', { id });
+  }
+
+  /**
+   * Recalculate a texte's state based on its remaining incoming relations
+   */
+  private async recalculateTexteState(texteId: string): Promise<void> {
+    const incomingRelations = await prisma.texteRelation.findMany({
+      where: { texteCibleId: texteId },
+      select: { type: true },
+    });
+
+    const types = new Set(incomingRelations.map(r => r.type));
+
+    let newEtat: EtatTexte;
+    if (types.has('ABROGE')) {
+      newEtat = EtatTexte.ABROGE;
+    } else if (types.has('MODIFIE') || types.has('COMPLETE')) {
+      newEtat = EtatTexte.MODIFIE;
+    } else {
+      newEtat = EtatTexte.VIGUEUR;
+    }
+
+    await prisma.texte.update({
+      where: { id: texteId },
+      data: {
+        etat: newEtat,
+        dateAbrogation: newEtat === EtatTexte.ABROGE ? undefined : null,
+      },
+    });
   }
 
   /**
@@ -259,7 +309,8 @@ class RelationService {
     }
 
     // Combine all content for analysis
-    const fullText = [texte.visas || '', ...texte.articles.map((a) => a.contenu)].join('\n');
+    const articles = texte.articles || [];
+    const fullText = [texte.visas || '', ...articles.map((a) => a.contenu)].join('\n');
 
     // Detection patterns
     const patterns = {

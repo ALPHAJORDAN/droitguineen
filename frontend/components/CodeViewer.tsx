@@ -1,7 +1,7 @@
 "use client";
 
 import { Article } from "@/lib/api";
-import { ChevronRight, ChevronDown, FileText } from "lucide-react";
+import { ChevronRight, ChevronDown } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
@@ -104,14 +104,14 @@ export function CodeViewer({ articles, fontSize = 'sm', searchQuery = '' }: Code
     const expandAll = () => setExpandedSections(new Set(allSectionIds));
     const collapseAll = () => setExpandedSections(new Set());
 
-    // Initialisation
-    useState(() => {
+    // Initialisation - expand top-level sections by default
+    useEffect(() => {
         const initial = new Set<string>();
         tree.forEach(s => {
             if (getLevelFromTitle(s.titre) <= 1) initial.add(s.id);
         });
         setExpandedSections(initial);
-    });
+    }, [tree]);
 
     // Auto-expand sections containing search results
     useEffect(() => {
@@ -269,10 +269,14 @@ function SectionBlock({
     ];
 
     // Adjust header sizes based on font size preference
+    const sizeMap: Record<string, Record<string, string>> = {
+        md: { 'text-sm': 'text-base', 'text-base': 'text-lg', 'text-lg': 'text-xl', 'text-xl': 'text-2xl' },
+        lg: { 'text-sm': 'text-lg', 'text-base': 'text-xl', 'text-lg': 'text-2xl', 'text-xl': 'text-3xl' },
+    };
     const adjustedHeaderStyles = headerStyles.map(style => {
-        if (fontSize === 'md') return style.replace('text-sm', 'text-base').replace('text-base', 'text-lg').replace('text-lg', 'text-xl').replace('text-xl', 'text-2xl');
-        if (fontSize === 'lg') return style.replace('text-sm', 'text-lg').replace('text-base', 'text-xl').replace('text-lg', 'text-2xl').replace('text-xl', 'text-3xl');
-        return style;
+        const map = sizeMap[fontSize];
+        if (!map) return style;
+        return style.replace(/text-(sm|base|lg|xl)/g, (match) => map[match] || match);
     });
 
     const indentStyles = [
@@ -321,12 +325,13 @@ function SectionBlock({
 
 function HighlightText({ text, query }: { text: string; query: string }) {
     if (!query.trim()) return <>{text || '\u00A0'}</>;
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escaped})`, 'gi');
     const parts = text.split(regex);
     return (
         <>
             {parts.map((part, i) =>
-                regex.test(part) ? (
+                part.toLowerCase() === query.toLowerCase() ? (
                     <mark key={i} className="bg-yellow-200 dark:bg-yellow-800/60 text-inherit rounded-sm px-0.5">{part}</mark>
                 ) : (
                     <span key={i}>{part}</span>
