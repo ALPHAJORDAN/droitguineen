@@ -7,6 +7,7 @@ import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import { createCanvas } from 'canvas';
 import fs from 'fs';
 import path from 'path';
+import { log } from '../utils/logger';
 
 // Configuration de pdfjs pour Node.js
 const NodeCanvasFactory = {
@@ -116,7 +117,7 @@ export async function extractPdfPagesAsImages(
 
         return pageImages;
     } catch (error) {
-        console.error('Erreur lors de l\'extraction des pages PDF:', error);
+        log.error('Failed to extract PDF pages as images', error as Error);
         throw new Error(`Impossible d'extraire les pages du PDF: ${error}`);
     }
 }

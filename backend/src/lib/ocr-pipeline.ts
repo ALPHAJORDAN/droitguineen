@@ -1,13 +1,12 @@
 /**
  * Pipeline OCR juridique avancé pour documents guinéens
- * Gère la qualité variable des PDFs avec prétraitement d'images
+ * Stratégie à 3 niveaux : Native → Google Vision → Tesseract.js
  */
 
 import fs from 'fs';
-import path from 'path';
-import sharp from 'sharp';
-
 import { v4 as uuidv4 } from 'uuid';
+import { Nature } from '@prisma/client';
+import { log } from '../utils/logger';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require('pdf-parse-fork');
@@ -39,7 +38,7 @@ export interface ExtractedDocument {
 export interface DocumentMetadata {
     titre?: string;
     titreComplet?: string;
-    nature?: string;
+    nature?: Nature;
     numero?: string;
     dateSignature?: Date;
     datePublication?: Date;
@@ -91,11 +90,11 @@ export interface AnnexeNode {
 }
 
 
-
 /**
  * Extraction de texte depuis un PDF avec stratégie à 3 niveaux
  * 1. Native (rapide, gratuit)
  * 2. Google Cloud Vision (précis, quota-limited)
+ * 3. Tesseract.js (local, fallback)
  */
 export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
     const startTime = Date.now();
@@ -110,11 +109,12 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
         const pdfData = await pdfParse(dataBuffer);
 
         const nativeText = pdfData.text?.trim() || '';
-        const charDensity = nativeText.length / (pdfData.numpages || 1);
+        const numPages = pdfData.numpages || 1;
+        const charDensity = nativeText.length / numPages;
 
         // Si le texte natif est suffisant (>500 chars/page en moyenne), l'utiliser
         if (charDensity > 500) {
-            console.log(`✅ Extraction native (densité: ${charDensity} chars/page)`);
+            log.info('Native extraction successful', { charDensity: Math.round(charDensity), pages: numPages });
             totalText = nativeText;
             method = 'native';
             totalConfidence = 95;
@@ -131,83 +131,138 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
             });
         } else {
             // Étape 2: OCR nécessaire - le PDF semble être scanné
-            console.log(`📄 PDF scanné détecté (densité: ${charDensity} chars/page)`);
+            log.info('Scanned PDF detected, OCR required', { charDensity: Math.round(charDensity), pages: numPages });
 
             // Import dynamique des modules OCR
             const { extractPdfPagesAsImages } = await import('./pdf-to-image');
             const { isVisionAvailable, processPagesWithVision } = await import('./google-vision-ocr');
             const { checkQuotaAvailable, trackQuotaUsage } = await import('./quota-tracker');
 
-            // Vérifier que Google Cloud Vision est disponible
-            if (!isVisionAvailable()) {
-                throw new Error('Google Cloud Vision non configuré. Veuillez configurer GOOGLE_CLOUD_VISION_ENABLED et GOOGLE_APPLICATION_CREDENTIALS dans .env');
-            }
-
-            if (!checkQuotaAvailable()) {
-                throw new Error('Quota Google Cloud Vision dépassé. Veuillez attendre la réinitialisation ou augmenter votre quota.');
-            }
-
             // Convertir le PDF en images page par page
-            console.log('🔄 Conversion PDF → Images...');
+            log.info('Converting PDF to images');
             const pageImages = await extractPdfPagesAsImages(filePath, {
                 scale: 2.0,
                 onProgress: (current, total) => {
-                    console.log(`  📄 Page ${current}/${total}`);
+                    log.debug('PDF page conversion progress', { current, total });
                 }
             });
 
-            console.log(`✅ ${pageImages.length} pages converties`);
+            log.info('PDF pages converted', { count: pageImages.length });
 
-            // Utiliser Google Cloud Vision
-            console.log('🌐 Traitement avec Google Cloud Vision API');
-            method = 'ocr';
+            let ocrSuccess = false;
 
-            const visionResults = await processPagesWithVision(
-                pageImages,
-                (current, total) => {
-                    console.log(`  🔍 OCR Vision page ${current}/${total}`);
+            // Essayer Google Cloud Vision en premier
+            if (isVisionAvailable() && checkQuotaAvailable()) {
+                try {
+                    log.info('Processing with Google Cloud Vision API');
+                    method = 'ocr';
+
+                    const visionResults = await processPagesWithVision(
+                        pageImages,
+                        (current, total) => {
+                            log.debug('Vision OCR progress', { current, total });
+                        }
+                    );
+
+                    // Traquer l'utilisation du quota
+                    trackQuotaUsage(pageImages.length);
+
+                    // Compiler les résultats
+                    const pageConfidences: number[] = [];
+
+                    for (const result of visionResults) {
+                        pages.push({
+                            pageNumber: result.pageNumber,
+                            text: result.text,
+                            confidence: result.confidence,
+                            method: 'ocr'
+                        });
+
+                        totalText += result.text + '\n\n';
+                        pageConfidences.push(result.confidence);
+                    }
+
+                    totalConfidence = pageConfidences.length > 0
+                        ? pageConfidences.reduce((a, b) => a + b, 0) / pageConfidences.length
+                        : 0;
+
+                    log.info('Google Vision OCR completed', { confidence: totalConfidence.toFixed(1) });
+                    ocrSuccess = totalText.trim().length > 0;
+                } catch (visionError) {
+                    log.error('Google Cloud Vision OCR failed', visionError as Error);
                 }
-            );
-
-            // Traquer l'utilisation du quota
-            trackQuotaUsage(pageImages.length);
-
-            // Compiler les résultats
-            let pageConfidences: number[] = [];
-
-            for (const result of visionResults) {
-                pages.push({
-                    pageNumber: result.pageNumber,
-                    text: result.text,
-                    confidence: result.confidence,
-                    method: 'ocr'
-                });
-
-                totalText += result.text + '\n\n';
-                pageConfidences.push(result.confidence);
+            } else {
+                log.info('Google Cloud Vision unavailable or quota exceeded');
             }
 
-            totalConfidence = pageConfidences.length > 0
-                ? pageConfidences.reduce((a, b) => a + b, 0) / pageConfidences.length
-                : 0;
+            // Fallback Tesseract.js si Vision n'a pas fonctionné
+            if (!ocrSuccess) {
+                try {
+                    log.info('Falling back to Tesseract.js OCR');
+                    const { createWorker } = await import('tesseract.js');
 
-            console.log(`✅ Google Vision: ${totalConfidence.toFixed(1)}% confiance`);
+                    const worker = await createWorker('fra');
+                    method = 'ocr';
+                    totalText = '';
+                    pages.length = 0;
+                    const pageConfidences: number[] = [];
+
+                    for (const pageImage of pageImages) {
+                        log.debug('Tesseract OCR progress', { page: pageImage.pageNumber, total: pageImages.length });
+
+                        const { data } = await worker.recognize(pageImage.imageBuffer);
+
+                        pages.push({
+                            pageNumber: pageImage.pageNumber,
+                            text: data.text,
+                            confidence: data.confidence,
+                            method: 'ocr'
+                        });
+
+                        totalText += data.text + '\n\n';
+                        pageConfidences.push(data.confidence);
+                    }
+
+                    await worker.terminate();
+
+                    totalConfidence = pageConfidences.length > 0
+                        ? pageConfidences.reduce((a, b) => a + b, 0) / pageConfidences.length
+                        : 0;
+
+                    log.info('Tesseract.js OCR completed', { confidence: totalConfidence.toFixed(1) });
+                    ocrSuccess = totalText.trim().length > 0;
+                } catch (tesseractError) {
+                    log.error('Tesseract.js OCR failed', tesseractError as Error);
+                }
+            }
+
+            // Dernier recours : texte natif partiel
+            if (!ocrSuccess) {
+                if (nativeText.length > 0) {
+                    log.warn('All OCR methods failed, using partial native text');
+                    totalText = nativeText;
+                    method = 'native';
+                    totalConfidence = 30;
+                } else {
+                    throw new Error('Impossible d\'extraire le texte du PDF. Aucune méthode OCR n\'a fonctionné.');
+                }
+            }
 
             // Si l'OCR donne un résultat faible, combiner avec le texte natif
-            if (totalConfidence < 60 && nativeText.length > 0) {
-                console.log('🔀 Mode hybride activé (confiance faible)');
+            if (totalConfidence < 60 && nativeText.length > 0 && method === 'ocr') {
+                log.info('Hybrid mode activated (low OCR confidence)', { confidence: totalConfidence.toFixed(1) });
                 method = 'hybrid';
                 totalText = mergeTexts(nativeText, totalText);
             }
         }
 
     } catch (error) {
-        console.error('❌ Erreur extraction PDF:', error);
+        log.error('PDF extraction failed', error as Error);
         throw new Error('Impossible d\'extraire le texte du PDF');
     }
 
     const processingTime = Date.now() - startTime;
-    console.log(`⏱️ Traitement terminé en ${(processingTime / 1000).toFixed(1)}s`);
+    log.info('PDF processing completed', { method, processingTime: `${(processingTime / 1000).toFixed(1)}s` });
 
     return {
         text: totalText,
@@ -222,10 +277,11 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
  * Fusion intelligente de deux textes (natif + OCR)
  */
 function mergeTexts(nativeText: string, ocrText: string): string {
-    // Stratégie simple: prendre le plus long des deux s'ils sont très différents
+    // Prendre le texte le plus long s'il est significativement plus riche
     if (ocrText.length > nativeText.length * 1.5) {
         return ocrText;
     }
+    // Sinon préférer le texte natif (meilleure qualité de formatage)
     return nativeText;
 }
 
@@ -234,31 +290,47 @@ function mergeTexts(nativeText: string, ocrText: string): string {
  */
 export function cleanText(rawText: string): string {
     return rawText
-        // Normaliser les espaces
-        .replace(/\s+/g, ' ')
-        // Corriger les erreurs OCR courantes
+        // Normaliser les espaces multiples (mais préserver les sauts de ligne)
+        .replace(/[^\S\n]+/g, ' ')
+        // Corriger les erreurs OCR courantes en français
         .replace(/\bl\s*'\s*/g, "l'")
         .replace(/\bd\s*'\s*/g, "d'")
         .replace(/\bqu\s*'\s*/g, "qu'")
         .replace(/\bn\s*'\s*/g, "n'")
         .replace(/\bs\s*'\s*/g, "s'")
         .replace(/\bj\s*'\s*/g, "j'")
-        // Corriger "Articte" -> "Article"
+        .replace(/\bc\s*'\s*/g, "c'")
+        .replace(/\bm\s*'\s*/g, "m'")
+        // Corriger "Articte" / "Artide" -> "Article"
         .replace(/Articte/gi, 'Article')
         .replace(/Artide/gi, 'Article')
-        // Corriger caractères mal reconnus
+        // Corriger caractères mal reconnus (ligatures)
         .replace(/[ﬁ]/g, 'fi')
         .replace(/[ﬂ]/g, 'fl')
         .replace(/[œ]/g, 'oe')
         .replace(/[æ]/g, 'ae')
         // Normaliser les tirets
         .replace(/[–—]/g, '-')
+        // Normaliser les apostrophes
+        .replace(/[''‛]/g, "'")
+        // Normaliser les guillemets
+        .replace(/[""‟„]/g, '"')
+        // Normaliser les points de suspension
+        .replace(/…/g, '...')
         // Supprimer les caractères de contrôle
         .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '')
-        // Restaurer les sauts de ligne pour les articles
+        // Supprimer les caractères zero-width
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        // Supprimer les tirets conditionnels
+        .replace(/[\u00AD]/g, '')
+        // Normaliser les espaces insécables
+        .replace(/\u00A0/g, ' ')
+        // Restaurer les sauts de ligne pour les articles et sections
         .replace(/\s*(Article\s+\d+)/gi, '\n\n$1')
         .replace(/\s*(TITRE\s+[IVX\d]+)/gi, '\n\n$1')
         .replace(/\s*(CHAPITRE\s+[IVX\d]+)/gi, '\n\n$1')
+        .replace(/\s*(LIVRE\s+[IVX\d]+)/gi, '\n\n$1')
+        .replace(/\s*(SECTION\s+[IVX\d]+)/gi, '\n\n$1')
         .trim();
 }
 
@@ -300,24 +372,27 @@ export function extractMetadata(text: string): DocumentMetadata {
     }
 
     // Extraction de la nature
-    const natureKeywords: Record<string, string> = {
-        'constitution': 'LOI_CONSTITUTIONNELLE',
-        'loi constitutionnelle': 'LOI_CONSTITUTIONNELLE',
-        'loi organique': 'LOI_ORGANIQUE',
-        'ordonnance': 'ORDONNANCE',
-        'décret-loi': 'DECRET_LOI',
-        'decret-loi': 'DECRET_LOI',
-        'décret': 'DECRET',
-        'decret': 'DECRET',
-        'arrêté': 'ARRETE',
-        'arrete': 'ARRETE',
-        'circulaire': 'CIRCULAIRE',
-        'code': 'CODE',
-        'loi': 'LOI'
-    };
+    const natureKeywords: [string, Nature][] = [
+        ['loi constitutionnelle', Nature.LOI_CONSTITUTIONNELLE],
+        ['constitution', Nature.LOI_CONSTITUTIONNELLE],
+        ['loi organique', Nature.LOI_ORGANIQUE],
+        ['décret-loi', Nature.DECRET_LOI],
+        ['decret-loi', Nature.DECRET_LOI],
+        ['ordonnance', Nature.ORDONNANCE],
+        ['décret', Nature.DECRET],
+        ['decret', Nature.DECRET],
+        ['arrêté', Nature.ARRETE],
+        ['arrete', Nature.ARRETE],
+        ['circulaire', Nature.CIRCULAIRE],
+        ['convention', Nature.CONVENTION],
+        ['traité', Nature.TRAITE],
+        ['traite', Nature.TRAITE],
+        ['code', Nature.CODE],
+        ['loi', Nature.LOI],
+    ];
 
     const textLower = text.toLowerCase().substring(0, 1000);
-    for (const [keyword, nature] of Object.entries(natureKeywords)) {
+    for (const [keyword, nature] of natureKeywords) {
         if (textLower.includes(keyword)) {
             metadata.nature = nature;
             break;
@@ -325,17 +400,17 @@ export function extractMetadata(text: string): DocumentMetadata {
     }
 
     // Extraction des dates
+    const moisFr: Record<string, number> = {
+        'janvier': 0, 'février': 1, 'fevrier': 1, 'mars': 2, 'avril': 3,
+        'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7, 'aout': 7,
+        'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11, 'decembre': 11
+    };
+
     const datePatterns = [
         { pattern: /(?:fait|signé|donné)\s+(?:à\s+\w+\s+)?le\s+(\d{1,2})\s+(\w+)\s+(\d{4})/i, type: 'signature' },
-        { pattern: /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/i, type: 'date' },
-        { pattern: /(\d{1,2})\s+(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+(\d{4})/i, type: 'date' }
+        { pattern: /(\d{1,2})\s+(janvier|février|fevrier|mars|avril|mai|juin|juillet|août|aout|septembre|octobre|novembre|décembre|decembre)\s+(\d{4})/i, type: 'date' },
+        { pattern: /(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/i, type: 'date' }
     ];
-
-    const moisFr: Record<string, number> = {
-        'janvier': 0, 'février': 1, 'mars': 2, 'avril': 3,
-        'mai': 4, 'juin': 5, 'juillet': 6, 'août': 7,
-        'septembre': 8, 'octobre': 9, 'novembre': 10, 'décembre': 11
-    };
 
     for (const { pattern, type } of datePatterns) {
         const match = text.match(pattern);
@@ -343,7 +418,7 @@ export function extractMetadata(text: string): DocumentMetadata {
             let date: Date | undefined;
             if (match[2] && moisFr[match[2].toLowerCase()] !== undefined) {
                 date = new Date(parseInt(match[3]), moisFr[match[2].toLowerCase()], parseInt(match[1]));
-            } else if (match.length === 4) {
+            } else if (match.length === 4 && !isNaN(parseInt(match[2]))) {
                 date = new Date(parseInt(match[3]), parseInt(match[2]) - 1, parseInt(match[1]));
             }
             if (date && !isNaN(date.getTime())) {
@@ -372,6 +447,12 @@ export function extractMetadata(text: string): DocumentMetadata {
     }
     if (signataires.length > 0) {
         metadata.signataires = signataires;
+    }
+
+    // Extraction des visas
+    const visasMatch = text.match(/Vu\s+[^;]+;/gi);
+    if (visasMatch) {
+        metadata.visas = visasMatch.map(v => v.trim());
     }
 
     // Extraction des références (abrogation, modification, etc.)
@@ -421,13 +502,13 @@ export function extractStructure(text: string): DocumentStructure {
 
     // Patterns pour sections
     const sectionPatterns: { pattern: RegExp; type: SectionNode['type']; niveau: number }[] = [
-        { pattern: /LIVRE\s+([IVX\d]+|PREMIER)(?:[\s\-:]+(.+))?/gi, type: 'LIVRE', niveau: 1 },
-        { pattern: /PARTIE\s+([IVX\d]+|PREMIERE)(?:[\s\-:]+(.+))?/gi, type: 'PARTIE', niveau: 1 },
-        { pattern: /TITRE\s+([IVX\d]+|PREMIER)(?:[\s\-:]+(.+))?/gi, type: 'TITRE', niveau: 2 },
-        { pattern: /CHAPITRE\s+([IVX\d]+|PREMIER)(?:[\s\-:]+(.+))?/gi, type: 'CHAPITRE', niveau: 3 },
-        { pattern: /Section\s+([IVX\d]+|première)(?:[\s\-:]+(.+))?/gi, type: 'SECTION', niveau: 4 },
-        { pattern: /Sous-section\s+([IVX\d]+)(?:[\s\-:]+(.+))?/gi, type: 'SOUS_SECTION', niveau: 5 },
-        { pattern: /§\s*(\d+)(?:[\s\-:]+(.+))?/gi, type: 'PARAGRAPHE', niveau: 6 }
+        { pattern: /LIVRE\s+([IVX\d]+|PREMIER)(?:[\s\-–:]+(.+))?/gi, type: 'LIVRE', niveau: 1 },
+        { pattern: /PARTIE\s+([IVX\d]+|PREMIERE)(?:[\s\-–:]+(.+))?/gi, type: 'PARTIE', niveau: 1 },
+        { pattern: /TITRE\s+([IVX\d]+|PREMIER)(?:[\s\-–:]+(.+))?/gi, type: 'TITRE', niveau: 2 },
+        { pattern: /CHAPITRE\s+([IVX\d]+|PREMIER)(?:[\s\-–:]+(.+))?/gi, type: 'CHAPITRE', niveau: 3 },
+        { pattern: /Section\s+([IVX\d]+|première)(?:[\s\-–:]+(.+))?/gi, type: 'SECTION', niveau: 4 },
+        { pattern: /Sous-section\s+([IVX\d]+)(?:[\s\-–:]+(.+))?/gi, type: 'SOUS_SECTION', niveau: 5 },
+        { pattern: /§\s*(\d+)(?:[\s\-–:]+(.+))?/gi, type: 'PARAGRAPHE', niveau: 6 }
     ];
 
     // Créer un index de toutes les sections avec leurs positions
@@ -471,21 +552,15 @@ export function extractStructure(text: string): DocumentStructure {
         sectionStack.push(section);
     }
 
-    // Extraction des articles avec pattern amélioré
-    // Gère: "Article 123", "Article premier", "Article 1er", "Art. 123", "Art 123"
-    // Capture tout le contenu jusqu'au prochain article ou fin de texte
-    const articlePattern = /(?:Article|Art\.?)\s+(?:i+|premier|1er|[\dIVXLCDM]+)(?:\s*[.:\-#]?\s*)[\s\S]*?(?=(?:Article|Art\.?)\s+(?:i+|premier|1er|[\dIVXLCDM]+)|$)/gi;
+    // Extraction des articles
+    const articlePattern = /(?:Article|Art\.?)\s+(?:i+|premier|1er|unique|[\dIVXLCDM]+)(?:\s*[.:\-#]?\s*)[\s\S]*?(?=(?:Article|Art\.?)\s+(?:i+|premier|1er|unique|[\dIVXLCDM]+)|$)/gi;
 
     const articleMatches = text.match(articlePattern);
 
     if (articleMatches) {
-        let ordre = 0;
-
         for (const articleText of articleMatches) {
-            ordre++;
-
             // Extraire le numéro de l'article
-            const numeroMatch = articleText.match(/(?:Article|Art\.?)\s+(i+|premier|1er|[\dIVXLCDM]+)/i);
+            const numeroMatch = articleText.match(/(?:Article|Art\.?)\s+(i+|premier|1er|unique|[\dIVXLCDM]+)/i);
             if (!numeroMatch) continue;
 
             let numero = numeroMatch[1];
@@ -493,9 +568,10 @@ export function extractStructure(text: string): DocumentStructure {
             // Normaliser les numéros
             if (numero.toLowerCase() === 'premier' || numero === '1er') {
                 numero = '1';
+            } else if (numero.toLowerCase() === 'unique') {
+                numero = 'unique';
             } else if (/^i+$/i.test(numero)) {
-                // Convertir les chiffres romains en minuscules en numéros
-                const romanMap: { [key: string]: number } = {
+                const romanMap: Record<string, number> = {
                     'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5,
                     'vi': 6, 'vii': 7, 'viii': 8, 'ix': 9, 'x': 10
                 };
@@ -503,20 +579,18 @@ export function extractStructure(text: string): DocumentStructure {
                 numero = (romanMap[romanLower] || numero).toString();
             }
 
-            // Extraire le titre (optionnel, sur la même ligne que "Article")
-            const titleMatch = articleText.match(/(?:Article|Art\.?)\s+(?:i+|premier|1er|[\dIVXLCDM]+)\s*[.:\-#]?\s*([^\n]+)?/i);
+            // Extraire le titre optionnel
+            const titleMatch = articleText.match(/(?:Article|Art\.?)\s+(?:i+|premier|1er|unique|[\dIVXLCDM]+)\s*[.:\-#]?\s*([^\n]+)?/i);
             const titre = titleMatch && titleMatch[1] ? titleMatch[1].trim() : undefined;
 
-            // Extraire le contenu (tout après la première ligne)
+            // Extraire le contenu
             const contentLines = articleText.split('\n');
             const contenu = contentLines.slice(1).join('\n').trim()
-                // Nettoyer les caractères spéciaux
                 .replace(/\s+/g, ' ')
                 .replace(/\s*#\s*/g, ' ')
                 .trim();
 
-            // Ignorer les articles vides, trop courts ou ressemblant à une Table des Matières
-            // ToC detection: termine par un chiffre, contient des points de suite, ou très court
+            // Ignorer les articles vides ou de table des matières
             if (contenu.length < 20 ||
                 /(\.{3,}|…)\s*\d+\s*$/.test(contenu) ||
                 /^\s*\d+\s*$/.test(contenu)) {
@@ -646,12 +720,12 @@ export function generateHTML(metadata: DocumentMetadata, structure: DocumentStru
     }
 
     // Sections
-    function renderSection(section: SectionNode, depth: number = 0): string {
+    function renderSection(section: SectionNode): string {
         let sectionHtml = `    <div class="section section-niveau-${section.niveau}">\n`;
         sectionHtml += `        <div class="section-titre">${escapeHtml(section.type)} ${escapeHtml(section.numero)}${section.titre ? ' - ' + escapeHtml(section.titre) : ''}</div>\n`;
 
         for (const child of section.children) {
-            sectionHtml += renderSection(child, depth + 1);
+            sectionHtml += renderSection(child);
         }
 
         for (const article of section.articles) {

@@ -6,6 +6,7 @@
 import { ImageAnnotatorClient } from '@google-cloud/vision';
 import fs from 'fs';
 import path from 'path';
+import { log } from '../utils/logger';
 
 export interface VisionOCRResult {
     text: string;
@@ -35,19 +36,19 @@ let visionClient: ImageAnnotatorClient | null = null;
  */
 export function initVisionClient(): ImageAnnotatorClient | null {
     if (!GOOGLE_VISION_ENABLED) {
-        console.log('ℹ️ Google Cloud Vision désactivé');
+        log.info('Google Cloud Vision disabled');
         return null;
     }
 
     if (!PROJECT_ID || !CREDENTIALS_PATH) {
-        console.warn('⚠️ Configuration Google Cloud Vision incomplète');
+        log.warn('Google Cloud Vision configuration incomplete');
         return null;
     }
 
     try {
         // Vérifier que le fichier de credentials existe
         if (!fs.existsSync(CREDENTIALS_PATH)) {
-            console.warn(`⚠️ Fichier credentials non trouvé: ${CREDENTIALS_PATH}`);
+            log.warn('Google Cloud Vision credentials file not found', { path: CREDENTIALS_PATH });
             return null;
         }
 
@@ -56,10 +57,10 @@ export function initVisionClient(): ImageAnnotatorClient | null {
             keyFilename: CREDENTIALS_PATH
         });
 
-        console.log('✅ Google Cloud Vision client initialisé');
+        log.info('Google Cloud Vision client initialized');
         return visionClient;
     } catch (error) {
-        console.error('❌ Erreur initialisation Google Cloud Vision:', error);
+        log.error('Google Cloud Vision initialization failed', error as Error);
         return null;
     }
 }
@@ -148,7 +149,7 @@ export async function processImageWithVision(
             throw new Error('Image invalide pour Google Cloud Vision');
         }
 
-        console.error('Erreur Google Cloud Vision:', error);
+        log.error('Google Cloud Vision processing error', error as Error);
         throw new Error(`Erreur Google Cloud Vision: ${error.message}`);
     }
 }
@@ -175,7 +176,7 @@ export async function processPagesWithVision(
                 confidence: result.confidence
             });
         } catch (error) {
-            console.error(`Erreur traitement page ${pageImage.pageNumber}:`, error);
+            log.error(`Vision OCR failed for page ${pageImage.pageNumber}`, error as Error);
             // En cas d'erreur sur une page, continuer avec les autres
             results.push({
                 pageNumber: pageImage.pageNumber,

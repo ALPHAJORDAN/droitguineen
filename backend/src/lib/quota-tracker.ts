@@ -5,6 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { log } from '../utils/logger';
 
 interface QuotaData {
     daily: {
@@ -32,7 +33,7 @@ function loadQuotaData(): QuotaData {
             return JSON.parse(data);
         }
     } catch (error) {
-        console.warn('Erreur lecture quota:', error);
+        log.warn('Error reading quota file', { error });
     }
 
     // Données par défaut
@@ -61,7 +62,7 @@ function saveQuotaData(data: QuotaData): void {
         }
         fs.writeFileSync(QUOTA_FILE, JSON.stringify(data, null, 2));
     } catch (error) {
-        console.error('Erreur sauvegarde quota:', error);
+        log.error('Error saving quota file', error as Error);
     }
 }
 
@@ -102,12 +103,12 @@ export function checkQuotaAvailable(): boolean {
     const data = resetIfNeeded(loadQuotaData());
 
     if (data.daily.count >= DAILY_LIMIT) {
-        console.warn(`⚠️ Quota journalier atteint: ${data.daily.count}/${DAILY_LIMIT}`);
+        log.warn('Daily quota reached', { used: data.daily.count, limit: DAILY_LIMIT });
         return false;
     }
 
     if (data.monthly.count >= MONTHLY_LIMIT) {
-        console.warn(`⚠️ Quota mensuel atteint: ${data.monthly.count}/${MONTHLY_LIMIT}`);
+        log.warn('Monthly quota reached', { used: data.monthly.count, limit: MONTHLY_LIMIT });
         return false;
     }
 
@@ -130,14 +131,14 @@ export function trackQuotaUsage(pagesProcessed: number): void {
     const monthlyPercent = (data.monthly.count / MONTHLY_LIMIT) * 100;
 
     if (dailyPercent >= 80) {
-        console.warn(`⚠️ Quota journalier à ${dailyPercent.toFixed(0)}%: ${data.daily.count}/${DAILY_LIMIT}`);
+        log.warn('Daily quota warning', { percentage: dailyPercent, used: data.daily.count, limit: DAILY_LIMIT });
     }
 
     if (monthlyPercent >= 80) {
-        console.warn(`⚠️ Quota mensuel à ${monthlyPercent.toFixed(0)}%: ${data.monthly.count}/${MONTHLY_LIMIT}`);
+        log.warn('Monthly quota warning', { percentage: monthlyPercent, used: data.monthly.count, limit: MONTHLY_LIMIT });
     }
 
-    console.log(`📊 Quota utilisé: ${data.daily.count}/${DAILY_LIMIT} aujourd'hui, ${data.monthly.count}/${MONTHLY_LIMIT} ce mois`);
+    log.info('Quota usage tracked', { daily: data.daily, monthly: data.monthly });
 }
 
 /**
@@ -180,7 +181,7 @@ export function resetQuota(): void {
         lastReset: now.toISOString()
     };
     saveQuotaData(data);
-    console.log('✅ Quotas réinitialisés');
+    log.info('Quotas reset');
 }
 
 export default {
