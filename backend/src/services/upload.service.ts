@@ -307,7 +307,13 @@ class UploadService {
       });
 
       // Save hierarchical or flat structure
-      if (sections.length > 0) {
+      // Check if sections actually contain articles before using them
+      let articlesInSections = 0;
+      for (const s of sections) {
+        articlesInSections += this.countArticles(s);
+      }
+
+      if (sections.length > 0 && articlesInSections > 0) {
         await this.createSectionsRecursively(sections, null, texte.id, { value: 1 });
       } else if (articles.length > 0) {
         await prisma.article.createMany({
