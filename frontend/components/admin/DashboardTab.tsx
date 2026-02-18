@@ -119,13 +119,13 @@ export function DashboardTab() {
                         <div className="flex items-center justify-center py-8">
                             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                         </div>
-                    ) : recentData?.data.length === 0 ? (
+                    ) : !recentData?.data?.length ? (
                         <p className="text-sm text-muted-foreground text-center py-8">
                             Aucun document encore
                         </p>
                     ) : (
                         <div className="space-y-3">
-                            {recentData?.data.map((texte) => (
+                            {recentData.data.map((texte) => (
                                 <Link
                                     key={texte.id}
                                     href={`/lois/${texte.id}`}
