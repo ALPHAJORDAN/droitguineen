@@ -2,13 +2,14 @@
 
 import { Article } from "@/lib/api";
 import { ChevronRight, ChevronDown, FileText } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/utils";
 
 interface CodeViewerProps {
     articles: Article[];
     fontSize?: 'sm' | 'md' | 'lg';
+    searchQuery?: string;
 }
 
 interface SectionNode {
@@ -18,7 +19,7 @@ interface SectionNode {
     children: Map<string, SectionNode>;
 }
 
-export function CodeViewer({ articles, fontSize = 'sm' }: CodeViewerProps) {
+export function CodeViewer({ articles, fontSize = 'sm', searchQuery = '' }: CodeViewerProps) {
     const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
 
     // Construire l'arborescence à partir des articles et leurs sections
@@ -112,6 +113,21 @@ export function CodeViewer({ articles, fontSize = 'sm' }: CodeViewerProps) {
         setExpandedSections(initial);
     });
 
+    // Auto-expand sections containing search results
+    useEffect(() => {
+        if (!searchQuery.trim()) return;
+        const query = searchQuery.toLowerCase();
+        const matchingSections = new Set<string>();
+        tree.forEach(s => {
+            if (s.articles.some(a => a.contenu.toLowerCase().includes(query) || a.numero.toLowerCase().includes(query))) {
+                matchingSections.add(s.id);
+            }
+        });
+        if (matchingSections.size > 0) {
+            setExpandedSections(prev => new Set([...prev, ...matchingSections]));
+        }
+    }, [searchQuery, tree]);
+
     // Grouper par niveau de section (LIVRE, TITRE, CHAPITRE, SECTION)
     const groupedByLevel = useMemo(() => {
         const groups: { niveau: string; sections: typeof tree }[] = [];
@@ -150,7 +166,7 @@ export function CodeViewer({ articles, fontSize = 'sm' }: CodeViewerProps) {
         return (
             <div className="space-y-4">
                 {unsectionedArticles.map(article => (
-                    <ArticleBlock key={article.id} article={article} fontSize={fontSize} />
+                    <ArticleBlock key={article.id} article={article} fontSize={fontSize} searchQuery={searchQuery} />
                 ))}
             </div>
         );
@@ -181,6 +197,7 @@ export function CodeViewer({ articles, fontSize = 'sm' }: CodeViewerProps) {
                                 fontSize={fontSize || 'sm'}
                                 isOpen={expandedSections.has(section.id)}
                                 onToggle={() => toggleSection(section.id)}
+                                searchQuery={searchQuery}
                             />
                         ))}
                     </div>
@@ -191,7 +208,7 @@ export function CodeViewer({ articles, fontSize = 'sm' }: CodeViewerProps) {
                 <div className="mt-6 pt-6 border-t">
                     <h3 className="text-lg font-semibold mb-4">Articles hors sections</h3>
                     {unsectionedArticles.map(article => (
-                        <ArticleBlock key={article.id} article={article} fontSize={fontSize} />
+                        <ArticleBlock key={article.id} article={article} fontSize={fontSize} searchQuery={searchQuery} />
                     ))}
                 </div>
             )}
@@ -203,6 +220,10 @@ function getLevelFromTitle(titre: string): number {
     const upper = titre.toUpperCase();
     if (upper.startsWith('LIVRE')) return 0;
     if (upper.startsWith('TITRE')) return 1;
+    if (upper.startsWith('CHAPITRE')) return 2;
+    if (upper.startsWith('SOUS-SECTION')) return 4;
+    if (upper.startsWith('SECTION')) return 3;
+    if (upper.startsWith('PARAGRAPHE')) return 5;
     return 5;
 }
 
@@ -221,18 +242,20 @@ function romanToInt(s: string): number {
     return result;
 }
 
-function SectionBlock({ 
-    section, 
-    level, 
-    fontSize, 
-    isOpen, 
-    onToggle 
-}: { 
-    section: SectionNode; 
-    level: number; 
+function SectionBlock({
+    section,
+    level,
+    fontSize,
+    isOpen,
+    onToggle,
+    searchQuery = '',
+}: {
+    section: SectionNode;
+    level: number;
     fontSize: 'sm' | 'md' | 'lg';
     isOpen: boolean;
     onToggle: () => void;
+    searchQuery?: string;
 }) {
     const hasArticles = section.articles.length > 0;
 
@@ -288,7 +311,7 @@ function SectionBlock({
             {isOpen && hasArticles && (
                 <div className="mt-2 space-y-4 border-l-2 border-primary/10 pl-4 ml-2">
                     {section.articles.map(article => (
-                        <ArticleBlock key={article.id} article={article} fontSize={fontSize} />
+                        <ArticleBlock key={article.id} article={article} fontSize={fontSize} searchQuery={searchQuery} />
                     ))}
                 </div>
             )}
@@ -296,10 +319,32 @@ function SectionBlock({
     );
 }
 
-function ArticleBlock({ article, fontSize }: { article: Article; fontSize: 'sm' | 'md' | 'lg' }) {
+function HighlightText({ text, query }: { text: string; query: string }) {
+    if (!query.trim()) return <>{text || '\u00A0'}</>;
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    const parts = text.split(regex);
+    return (
+        <>
+            {parts.map((part, i) =>
+                regex.test(part) ? (
+                    <mark key={i} className="bg-yellow-200 dark:bg-yellow-800/60 text-inherit rounded-sm px-0.5">{part}</mark>
+                ) : (
+                    <span key={i}>{part}</span>
+                )
+            )}
+        </>
+    );
+}
+
+function ArticleBlock({ article, fontSize, searchQuery = '' }: { article: Article; fontSize: 'sm' | 'md' | 'lg'; searchQuery?: string }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const isLongContent = article.contenu.length > 500;
-    const displayContent = isExpanded || !isLongContent
+
+    // Auto-expand if search matches in the truncated part
+    const hasSearchMatch = searchQuery.trim() && article.contenu.toLowerCase().includes(searchQuery.toLowerCase());
+    const shouldExpand = isExpanded || (isLongContent && hasSearchMatch);
+
+    const displayContent = shouldExpand || !isLongContent
         ? article.contenu
         : article.contenu.substring(0, 500) + '...';
 
@@ -335,11 +380,11 @@ function ArticleBlock({ article, fontSize }: { article: Article; fontSize: 'sm' 
             <div className={cn("prose dark:prose-invert max-w-none text-justify leading-relaxed", textSize)}>
                 {displayContent.split('\n').map((line, i) => (
                     <p key={i} className="mb-1.5">
-                        {line || '\u00A0'}
+                        {searchQuery ? <HighlightText text={line || '\u00A0'} query={searchQuery} /> : (line || '\u00A0')}
                     </p>
                 ))}
             </div>
-            {isLongContent && (
+            {isLongContent && !hasSearchMatch && (
                 <button
                     onClick={() => setIsExpanded(!isExpanded)}
                     className="text-xs text-primary hover:underline mt-2"

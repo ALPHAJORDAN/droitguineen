@@ -7,12 +7,19 @@ import { useLoi, useRelations, useExport } from "@/lib/hooks";
 import { NATURE_LABELS, ETAT_LABELS, Texte } from "@/lib/api";
 import {
     ChevronRight, FileText, Share2, Printer, Calendar, AlertCircle, ArrowLeft,
-    Loader2, Link2, FileDown, Type, Scale, BookOpen, Gavel, FileCheck,
-    Clock, User, Hash, BookMarked, ExternalLink
+    Loader2, FileDown, Type, Scale, BookOpen, Gavel, FileCheck,
+    Clock, User, Hash, BookMarked, ExternalLink, Pencil, Download,
 } from "lucide-react";
 import Link from "next/link";
 import { CodeViewer } from "@/components/CodeViewer";
-import { useState, useEffect, useRef } from "react";
+import { HierarchicalTOC } from "@/components/law-detail/HierarchicalTOC";
+import { SearchBar } from "@/components/law-detail/SearchBar";
+import { MetadataPanel } from "@/components/law-detail/MetadataPanel";
+import { RelationsPanel } from "@/components/law-detail/RelationsPanel";
+import { EditModal } from "@/components/admin/EditModal";
+import { ToastProvider } from "@/components/admin/Toast";
+import { useAuth } from "@/lib/auth";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import Script from "next/script";
 
@@ -45,30 +52,21 @@ const ETAT_STYLES: Record<string, string> = {
     PERIME: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
 };
 
-const RELATION_TYPES = [
-    { key: "abroge", label: "Abroge", color: "text-red-600 dark:text-red-400", dir: "source" },
-    { key: "modifie", label: "Modifie", color: "text-amber-600 dark:text-amber-400", dir: "source" },
-    { key: "complete", label: "Complète", color: "text-blue-600 dark:text-blue-400", dir: "source" },
-    { key: "cite", label: "Cite", color: "text-muted-foreground", dir: "source" },
-    { key: "applique", label: "Applique", color: "text-purple-600 dark:text-purple-400", dir: "source" },
-    { key: "ratifie", label: "Ratifie", color: "text-teal-600 dark:text-teal-400", dir: "source" },
-    { key: "abrogePar", label: "Abrogé par", color: "text-red-600 dark:text-red-400", dir: "cible" },
-    { key: "modifiePar", label: "Modifié par", color: "text-amber-600 dark:text-amber-400", dir: "cible" },
-    { key: "completePar", label: "Complété par", color: "text-blue-600 dark:text-blue-400", dir: "cible" },
-    { key: "citePar", label: "Cité par", color: "text-muted-foreground", dir: "cible" },
-    { key: "appliquePar", label: "Appliqué par", color: "text-purple-600 dark:text-purple-400", dir: "cible" },
-    { key: "ratifiePar", label: "Ratifié par", color: "text-teal-600 dark:text-teal-400", dir: "cible" },
-] as const;
-
 export function LawDetailsClient({ id, initialData }: { id: string; initialData?: Texte }) {
     const { data: texte, isLoading, isError, error } = useLoi(id, initialData);
     const { data: relationsData } = useRelations(id);
+    const { user } = useAuth();
     const exportMutation = useExport();
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [fontSize, setFontSize] = useState<'sm' | 'md' | 'lg'>('sm');
     const [copied, setCopied] = useState(false);
     const [activeArticle, setActiveArticle] = useState<string | null>(null);
+    const [searchQuery, setSearchQuery] = useState("");
+    const [editingId, setEditingId] = useState<string | null>(null);
     const exportMenuRef = useRef<HTMLDivElement>(null);
+
+    const isAdmin = user?.role === "ADMIN" || user?.role === "EDITOR";
+    const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
     // Close export menu on outside click
     useEffect(() => {
@@ -114,6 +112,19 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleSearch = useCallback((query: string) => {
+        setSearchQuery(query);
+    }, []);
+
+    // Count articles matching search
+    const articles = texte?.articles || [];
+    const searchResultCount = searchQuery.trim()
+        ? articles.filter(a =>
+            a.contenu.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            a.numero.toLowerCase().includes(searchQuery.toLowerCase())
+        ).length
+        : 0;
+
     if (isLoading) {
         return (
             <div className="flex min-h-screen flex-col">
@@ -139,13 +150,13 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                         <div>
                             <h2 className="font-semibold text-destructive">Erreur</h2>
                             <p className="text-muted-foreground">
-                                {error instanceof Error ? error.message : "Impossible de charger ce texte. Il n'existe peut-être pas."}
+                                {error instanceof Error ? error.message : "Impossible de charger ce texte. Il n'existe peut-etre pas."}
                             </p>
                         </div>
                     </div>
                     <Link href="/lois" className="inline-flex items-center gap-2 mt-6 text-primary hover:underline">
                         <ArrowLeft className="h-4 w-4" />
-                        Retour à la liste
+                        Retour a la liste
                     </Link>
                 </div>
                 <Footer />
@@ -153,18 +164,9 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
         );
     }
 
-    const articles = texte.articles || [];
     const natureLabel = NATURE_LABELS[texte.nature] || texte.nature;
     const etatLabel = ETAT_LABELS[texte.etat] || texte.etat;
     const etatStyle = ETAT_STYLES[texte.etat] || ETAT_STYLES.VIGUEUR;
-
-    // Collect all non-empty relations
-    const activeRelations = relationsData
-        ? RELATION_TYPES.filter(rt => {
-            const rels = relationsData.relations[rt.key as keyof typeof relationsData.relations];
-            return rels && rels.length > 0;
-        })
-        : [];
 
     // SEO Structured Data (JSON-LD)
     const jsonLd = {
@@ -194,7 +196,12 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                         <nav className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground mb-6">
                             <Link href="/lois" className="hover:text-primary transition-colors">Textes juridiques</Link>
                             <ChevronRight className="h-3.5 w-3.5" />
-                            <span>{natureLabel}</span>
+                            <Link
+                                href={`/lois?nature=${texte.nature}`}
+                                className="hover:text-primary transition-colors"
+                            >
+                                {natureLabel}
+                            </Link>
                             {texte.numero && (
                                 <>
                                     <ChevronRight className="h-3.5 w-3.5" />
@@ -242,12 +249,17 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                     )}
                                     {texte.dateSignature && (
                                         <span className="flex items-center gap-1.5">
-                                            <Calendar className="h-3.5 w-3.5" /> Signé le {formatDate(texte.dateSignature)}
+                                            <Calendar className="h-3.5 w-3.5" /> Signe le {formatDate(texte.dateSignature)}
                                         </span>
                                     )}
                                     {texte.datePublication && (
                                         <span className="flex items-center gap-1.5">
-                                            <Clock className="h-3.5 w-3.5" /> Publié le {formatDate(texte.datePublication)}
+                                            <Clock className="h-3.5 w-3.5" /> Publie le {formatDate(texte.datePublication)}
+                                        </span>
+                                    )}
+                                    {texte.dateEntreeVigueur && (
+                                        <span className="flex items-center gap-1.5">
+                                            <Calendar className="h-3.5 w-3.5" /> En vigueur le {formatDate(texte.dateEntreeVigueur)}
                                         </span>
                                     )}
                                     {texte.signataires && (
@@ -311,8 +323,20 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                 </Button>
                                 <Button variant="outline" size="sm" onClick={handleShare}>
                                     <Share2 className="mr-2 h-4 w-4" />
-                                    {copied ? "Copié !" : "Partager"}
+                                    {copied ? "Copie !" : "Partager"}
                                 </Button>
+                                {texte.fichierPdf && (
+                                    <a href={`${API_URL}/${texte.fichierPdf}`} target="_blank" rel="noopener noreferrer">
+                                        <Button variant="outline" size="sm">
+                                            <Download className="mr-2 h-4 w-4" /> PDF
+                                        </Button>
+                                    </a>
+                                )}
+                                {isAdmin && (
+                                    <Button variant="outline" size="sm" onClick={() => setEditingId(id)}>
+                                        <Pencil className="mr-2 h-4 w-4" /> Modifier
+                                    </Button>
+                                )}
                             </div>
 
                             {/* Font Size Controls */}
@@ -336,39 +360,25 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
 
                 {/* Content area */}
                 <div className="container px-4 md:px-6 py-8">
-                    <div className="flex flex-col lg:flex-row gap-8">
-                        {/* Table of Contents Sidebar */}
+                    <div className="flex gap-8">
+                        {/* Table of Contents Sidebar (desktop) + Mobile floating button */}
                         {articles.length > 0 && (
-                            <aside className="w-full lg:w-72 xl:w-80 flex-shrink-0 order-2 lg:order-1">
-                                <div className="sticky top-20 border rounded-lg bg-card max-h-[calc(100vh-6rem)] overflow-hidden flex flex-col">
-                                    <div className="p-4 border-b bg-muted/30">
-                                        <h2 className="font-semibold text-sm flex items-center">
-                                            <FileText className="mr-2 h-4 w-4 text-primary" />
-                                            Table des matières
-                                        </h2>
-                                    </div>
-                                    <nav className="p-3 overflow-y-auto flex-1 space-y-0.5">
-                                        {articles.map((article) => (
-                                            <a
-                                                key={article.id}
-                                                href={`#article-${article.numero}`}
-                                                className={cn(
-                                                    "block text-sm py-1.5 px-2 rounded-md transition-colors",
-                                                    activeArticle === `article-${article.numero}`
-                                                        ? "bg-primary/10 text-primary font-medium"
-                                                        : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-                                                )}
-                                            >
-                                                Art. {article.numero}
-                                            </a>
-                                        ))}
-                                    </nav>
-                                </div>
-                            </aside>
+                            <HierarchicalTOC
+                                sections={texte.sections}
+                                articles={articles}
+                                activeArticle={activeArticle}
+                            />
                         )}
 
                         {/* Main Content */}
-                        <main className={cn("flex-1 min-w-0 order-1 lg:order-2", !articles.length && "max-w-4xl mx-auto")}>
+                        <main className={cn("flex-1 min-w-0", !articles.length && "max-w-4xl mx-auto")}>
+                            {/* Search bar */}
+                            {articles.length > 0 && (
+                                <div className="mb-6">
+                                    <SearchBar onSearch={handleSearch} resultCount={searchResultCount} />
+                                </div>
+                            )}
+
                             {/* Visas */}
                             {texte.visas && (
                                 <details className="mb-6 border rounded-lg">
@@ -381,94 +391,44 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                 </details>
                             )}
 
+                            {/* Metadata Panel */}
+                            <div className="mb-6">
+                                <MetadataPanel texte={texte} />
+                            </div>
+
                             {/* Articles */}
                             {articles.length > 0 ? (
                                 <div>
                                     <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 rounded-lg p-3.5 mb-6 text-sm text-blue-800 dark:text-blue-300 flex items-center">
                                         <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                                        Cliquez sur les titres pour dérouler le contenu. {articles.length} article{articles.length > 1 ? "s" : ""} au total.
+                                        Cliquez sur les titres pour derouler le contenu. {articles.length} article{articles.length > 1 ? "s" : ""} au total.
                                     </div>
-                                    <CodeViewer articles={articles} fontSize={fontSize} />
+                                    <CodeViewer articles={articles} fontSize={fontSize} searchQuery={searchQuery} />
                                 </div>
                             ) : (
                                 <div className="text-center py-16 text-muted-foreground">
                                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                                     <p>Aucun article disponible pour ce texte.</p>
-                                    <p className="text-sm mt-1">Le contenu n&apos;a peut-être pas encore été extrait.</p>
+                                    <p className="text-sm mt-1">Le contenu n&apos;a peut-etre pas encore ete extrait.</p>
                                 </div>
                             )}
 
                             {/* Relations */}
                             {relationsData && relationsData.counts.total > 0 && (
-                                <div className="mt-12 border-t pt-8">
-                                    <h2 className="text-xl font-bold mb-6 flex items-center">
-                                        <Link2 className="mr-2 h-5 w-5 text-primary" />
-                                        Relations avec d&apos;autres textes
-                                        <span className="ml-2 text-sm font-normal text-muted-foreground">
-                                            ({relationsData.counts.total})
-                                        </span>
-                                    </h2>
-
-                                    <div className="grid md:grid-cols-2 gap-6">
-                                        {/* Ce texte agit sur */}
-                                        {relationsData.counts.source > 0 && (
-                                            <div className="border rounded-lg overflow-hidden">
-                                                <div className="px-4 py-3 bg-muted/30 border-b">
-                                                    <h3 className="font-semibold text-sm">Ce texte agit sur</h3>
-                                                </div>
-                                                <ul className="divide-y">
-                                                    {activeRelations
-                                                        .filter(rt => rt.dir === "source")
-                                                        .flatMap(rt => {
-                                                            const rels = relationsData.relations[rt.key as keyof typeof relationsData.relations];
-                                                            return rels.map(rel => (
-                                                                <li key={rel.id} className="px-4 py-3 flex items-start gap-2 text-sm hover:bg-muted/30 transition-colors">
-                                                                    <span className={cn("font-medium flex-shrink-0 mt-0.5", rt.color)}>
-                                                                        {rt.label}
-                                                                    </span>
-                                                                    <Link href={`/lois/${rel.texteCible?.id}`} className="text-primary hover:underline line-clamp-2">
-                                                                        {rel.texteCible?.titre}
-                                                                    </Link>
-                                                                </li>
-                                                            ));
-                                                        })}
-                                                </ul>
-                                            </div>
-                                        )}
-
-                                        {/* Ce texte est affecté par */}
-                                        {relationsData.counts.cible > 0 && (
-                                            <div className="border rounded-lg overflow-hidden">
-                                                <div className="px-4 py-3 bg-muted/30 border-b">
-                                                    <h3 className="font-semibold text-sm">Ce texte est affecté par</h3>
-                                                </div>
-                                                <ul className="divide-y">
-                                                    {activeRelations
-                                                        .filter(rt => rt.dir === "cible")
-                                                        .flatMap(rt => {
-                                                            const rels = relationsData.relations[rt.key as keyof typeof relationsData.relations];
-                                                            return rels.map(rel => (
-                                                                <li key={rel.id} className="px-4 py-3 flex items-start gap-2 text-sm hover:bg-muted/30 transition-colors">
-                                                                    <span className={cn("font-medium flex-shrink-0 mt-0.5", rt.color)}>
-                                                                        {rt.label}
-                                                                    </span>
-                                                                    <Link href={`/lois/${rel.texteSource?.id}`} className="text-primary hover:underline line-clamp-2">
-                                                                        {rel.texteSource?.titre}
-                                                                    </Link>
-                                                                </li>
-                                                            ));
-                                                        })}
-                                                </ul>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
+                                <RelationsPanel relationsData={relationsData} />
                             )}
                         </main>
                     </div>
                 </div>
             </div>
             <Footer />
+
+            {/* Edit Modal */}
+            {editingId && (
+                <ToastProvider>
+                    <EditModal texteId={editingId} onClose={() => setEditingId(null)} />
+                </ToastProvider>
+            )}
         </div>
     );
 }
