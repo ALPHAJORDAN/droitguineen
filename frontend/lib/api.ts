@@ -193,9 +193,31 @@ export interface PaginatedResponse<T> {
     };
 }
 
+export interface ArticleHit {
+    type: 'article';
+    id: string;
+    numero: string;
+    contenu: string;
+    ordre: number;
+    etat: string;
+    texteId: string;
+    texteTitre: string;
+    texteNature: string;
+    texteNumero: string | null;
+    texteEtat: string;
+    texteDatePublication: string | null;
+    _formatted?: {
+        contenu?: string;
+        numero?: string;
+    };
+    _cropLength?: number;
+}
+
+export type SearchHit = (Texte & { type: 'texte' }) | ArticleHit;
+
 export interface SearchResponse {
     query: string;
-    hits: Texte[];
+    hits: SearchHit[];
     pagination: {
         page: number;
         limit: number;

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import prisma from '../lib/prisma';
-import { indexTexte } from '../lib/meilisearch';
+import { indexTexte, indexArticles } from '../lib/meilisearch';
 import { Nature, EtatTexte } from '@prisma/client';
 import { AppError } from '../middlewares/error.middleware';
 import { log } from '../utils/logger';
@@ -325,6 +325,7 @@ class UploadService {
       if (texteComplete) {
         try {
           await indexTexte(texteComplete);
+          await indexArticles(texteComplete);
         } catch (e) {
           log.warn('Meilisearch indexing failed', { texteId: texte.id, error: e });
         }

@@ -1,9 +1,9 @@
 import { Router, Request, Response } from 'express';
-import { searchTextes } from '../lib/meilisearch';
+import { searchTextes, searchArticles } from '../lib/meilisearch';
 
 const router = Router();
 
-// GET /recherche - Recherche full-text via Meilisearch
+// GET /recherche - Recherche full-text via Meilisearch (textes + articles)
 router.get('/', async (req: Request, res: Response) => {
     try {
         const {
@@ -27,25 +27,52 @@ router.get('/', async (req: Request, res: Response) => {
             });
         }
 
-        const result = await searchTextes(q as string, {
+        const searchOptions = {
             nature: nature as string | undefined,
             etat: etat as string | undefined,
             dateDebut: dateDebut as string | undefined,
             dateFin: dateFin as string | undefined,
-            limit: limitNum,
-            offset,
-        });
+        };
+
+        // Search textes and articles in parallel
+        const [textesResult, articlesResult] = await Promise.all([
+            searchTextes(q as string, {
+                ...searchOptions,
+                limit: limitNum,
+                offset,
+            }),
+            searchArticles(q as string, {
+                ...searchOptions,
+                limit: limitNum,
+                offset,
+            }),
+        ]);
+
+        // Tag results with their type
+        const texteHits = textesResult.hits.map((hit: any) => ({
+            ...hit,
+            type: 'texte',
+        }));
+
+        const articleHits = articlesResult.hits.map((hit: any) => ({
+            ...hit,
+            type: 'article',
+        }));
+
+        // Merge: articles first (more specific), then textes
+        const allHits = [...articleHits, ...texteHits];
+        const totalEstimated = textesResult.estimatedTotalHits + articlesResult.estimatedTotalHits;
 
         res.json({
             query: q,
-            hits: result.hits,
+            hits: allHits,
             pagination: {
                 page: pageNum,
                 limit: limitNum,
-                total: result.estimatedTotalHits,
-                totalPages: Math.ceil(result.estimatedTotalHits / limitNum),
+                total: totalEstimated,
+                totalPages: Math.ceil(totalEstimated / limitNum),
             },
-            processingTimeMs: result.processingTimeMs,
+            processingTimeMs: Math.max(textesResult.processingTimeMs, articlesResult.processingTimeMs),
         });
     } catch (error) {
         console.error('Error searching:', error);

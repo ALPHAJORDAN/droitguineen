@@ -14,7 +14,7 @@ import {
 import { Suspense, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSearch, useLois } from "@/lib/hooks";
-import { NATURE_LABELS, ETAT_LABELS, Texte } from "@/lib/api";
+import { NATURE_LABELS, ETAT_LABELS, Texte, ArticleHit, SearchHit } from "@/lib/api";
 import { formatDate } from "@/lib/utils";
 
 // Map frontend type filters to backend nature values
@@ -104,6 +104,107 @@ function buildParams(filters: Record<string, string | null | undefined>): URLSea
     return params;
 }
 
+function TexteCard({ texte }: { texte: Texte }) {
+    return (
+        <Link
+            href={`/lois/${texte.id}`}
+            className="group border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all bg-card block"
+        >
+            <div className="flex items-start gap-4">
+                <div className="p-3 bg-primary/10 rounded-lg text-primary flex-shrink-0">
+                    {NATURE_ICONS[texte.nature] || <FileText className="h-5 w-5" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-xs font-medium px-2 py-0.5 bg-muted rounded">
+                            {NATURE_LABELS[texte.nature] || texte.nature}
+                        </span>
+                        {texte.etat && ETAT_LABELS[texte.etat] && (
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${ETAT_STYLES[texte.etat] || ETAT_STYLES.VIGUEUR}`}>
+                                {ETAT_LABELS[texte.etat]}
+                            </span>
+                        )}
+                        {texte.sousCategorie && (
+                            <span className="text-xs font-medium px-2 py-0.5 bg-muted/60 rounded">
+                                {texte.sousCategorie}
+                            </span>
+                        )}
+                        {texte.datePublication && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(texte.datePublication)}
+                            </span>
+                        )}
+                    </div>
+                    <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-2">
+                        {texte.titre}
+                    </h3>
+                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
+                        {texte.numero && (
+                            <span>N&deg; {texte.numero}</span>
+                        )}
+                        {texte.signataires && (
+                            <span className="truncate max-w-xs">{texte.signataires}</span>
+                        )}
+                    </div>
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
+            </div>
+        </Link>
+    );
+}
+
+function ArticleCard({ article }: { article: ArticleHit }) {
+    const highlightedContent = article._formatted?.contenu || article.contenu;
+    // Truncate plain content for display (highlighted content is already cropped by Meilisearch)
+    const displayContent = article._formatted?.contenu
+        ? highlightedContent
+        : (article.contenu.length > 300 ? article.contenu.slice(0, 300) + "..." : article.contenu);
+
+    return (
+        <Link
+            href={`/lois/${article.texteId}`}
+            className="group border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all bg-card block border-l-4 border-l-blue-400 dark:border-l-blue-500"
+        >
+            <div className="flex items-start gap-4">
+                <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 flex-shrink-0">
+                    <FileText className="h-5 w-5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                        <span className="text-xs font-bold px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 rounded">
+                            Article {article.numero}
+                        </span>
+                        <span className="text-xs font-medium px-2 py-0.5 bg-muted rounded">
+                            {NATURE_LABELS[article.texteNature] || article.texteNature}
+                        </span>
+                        {article.texteEtat && ETAT_LABELS[article.texteEtat] && (
+                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${ETAT_STYLES[article.texteEtat] || ETAT_STYLES.VIGUEUR}`}>
+                                {ETAT_LABELS[article.texteEtat]}
+                            </span>
+                        )}
+                        {article.texteDatePublication && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Calendar className="h-3 w-3" />
+                                {formatDate(article.texteDatePublication)}
+                            </span>
+                        )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mb-1.5">
+                        {article.texteTitre}
+                        {article.texteNumero && <span> &middot; N&deg; {article.texteNumero}</span>}
+                    </p>
+                    <div
+                        className="text-sm leading-relaxed line-clamp-3 [&_mark]:bg-yellow-200 [&_mark]:dark:bg-yellow-800 [&_mark]:px-0.5 [&_mark]:rounded-sm"
+                        dangerouslySetInnerHTML={{ __html: displayContent }}
+                    />
+                </div>
+                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
+            </div>
+        </Link>
+    );
+}
+
 function SearchResults() {
     const filters = useSearchFilters();
     const nature = filters.type ? TYPE_TO_NATURE[filters.type] : undefined;
@@ -132,9 +233,10 @@ function SearchResults() {
     const query = isSearching ? searchQuery : listQuery;
     const { isLoading, isError, error } = query;
 
-    const results: Texte[] = isSearching
+    // When searching, hits can be textes or articles
+    const searchHits: SearchHit[] = isSearching
         ? (searchQuery.data?.hits || [])
-        : (listQuery.data?.data || []);
+        : (listQuery.data?.data || []).map(t => ({ ...t, type: 'texte' as const }));
 
     const pagination = isSearching
         ? searchQuery.data?.pagination
@@ -176,7 +278,7 @@ function SearchResults() {
         );
     }
 
-    if (results.length === 0) {
+    if (searchHits.length === 0) {
         return (
             <div className="text-center py-12">
                 <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
@@ -209,54 +311,13 @@ function SearchResults() {
                 </div>
             )}
 
-            {results.map((texte) => (
-                <Link
-                    key={texte.id}
-                    href={`/lois/${texte.id}`}
-                    className="group border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all bg-card block"
-                >
-                    <div className="flex items-start gap-4">
-                        <div className="p-3 bg-primary/10 rounded-lg text-primary flex-shrink-0">
-                            {NATURE_ICONS[texte.nature] || <FileText className="h-5 w-5" />}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <span className="text-xs font-medium px-2 py-0.5 bg-muted rounded">
-                                    {NATURE_LABELS[texte.nature] || texte.nature}
-                                </span>
-                                {texte.etat && ETAT_LABELS[texte.etat] && (
-                                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${ETAT_STYLES[texte.etat] || ETAT_STYLES.VIGUEUR}`}>
-                                        {ETAT_LABELS[texte.etat]}
-                                    </span>
-                                )}
-                                {texte.sousCategorie && (
-                                    <span className="text-xs font-medium px-2 py-0.5 bg-muted/60 rounded">
-                                        {texte.sousCategorie}
-                                    </span>
-                                )}
-                                {texte.datePublication && (
-                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                        <Calendar className="h-3 w-3" />
-                                        {formatDate(texte.datePublication)}
-                                    </span>
-                                )}
-                            </div>
-                            <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-2">
-                                {texte.titre}
-                            </h3>
-                            <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                                {texte.numero && (
-                                    <span>N&deg; {texte.numero}</span>
-                                )}
-                                {texte.signataires && (
-                                    <span className="truncate max-w-xs">{texte.signataires}</span>
-                                )}
-                            </div>
-                        </div>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
-                    </div>
-                </Link>
-            ))}
+            {searchHits.map((hit) =>
+                hit.type === 'article' ? (
+                    <ArticleCard key={`article-${hit.id}`} article={hit} />
+                ) : (
+                    <TexteCard key={`texte-${hit.id}`} texte={hit} />
+                )
+            )}
         </div>
     );
 }

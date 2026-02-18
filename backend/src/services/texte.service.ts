@@ -1,5 +1,5 @@
 import { texteRepository, FindAllOptions, CreateTexteData } from '../repositories/texte.repository';
-import { indexTexte, removeTexteFromIndex } from '../lib/meilisearch';
+import { indexTexte, indexArticles, removeTexteFromIndex, removeArticlesFromIndex } from '../lib/meilisearch';
 import { AppError } from '../middlewares/error.middleware';
 import { Prisma } from '@prisma/client';
 import { log } from '../utils/logger';
@@ -89,6 +89,7 @@ class TexteService {
         ...texte,
         articles: texte.articles,
       });
+      await indexArticles(texte);
     } catch (error) {
       log.warn('Failed to index texte in Meilisearch', { texteId: texte.id, error });
     }
@@ -143,6 +144,7 @@ class TexteService {
         ...texte,
         articles: texte.articles,
       });
+      await indexArticles(texte);
     } catch (error) {
       log.warn('Failed to reindex texte in Meilisearch', { texteId: texte.id, error });
     }
@@ -168,6 +170,7 @@ class TexteService {
     // Remove from Meilisearch
     try {
       await removeTexteFromIndex(id);
+      await removeArticlesFromIndex(id);
     } catch (error) {
       log.warn('Failed to remove texte from Meilisearch', { texteId: id, error });
     }
