@@ -291,6 +291,13 @@ export async function searchTextes(query: string, options?: {
     return res.json();
 }
 
+export async function searchSuggestions(query: string): Promise<SearchResponse> {
+    const params = new URLSearchParams({ q: query, limit: '5' });
+    const res = await fetch(`${API_BASE_URL}/recherche?${params.toString()}`);
+    if (!res.ok) throw new Error('Failed to fetch suggestions');
+    return res.json();
+}
+
 // ============ Protected API Functions (auth required) ============
 
 export async function createLoi(data: {

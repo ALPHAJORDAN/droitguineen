@@ -3,6 +3,7 @@ import {
     fetchLois,
     getLoi,
     searchTextes,
+    searchSuggestions,
     getFiles,
     deleteFile,
     uploadPdf,
@@ -54,6 +55,10 @@ export const queryKeys = {
     users: {
         all: ["users"] as const,
         list: (page?: number) => [...queryKeys.users.all, "list", page] as const,
+    },
+    suggestions: {
+        all: ["suggestions"] as const,
+        query: (q: string) => ["suggestions", q] as const,
     },
     relations: {
         all: ["relations"] as const,
@@ -107,6 +112,17 @@ export function useSearch(
         queryKey: queryKeys.search.results(query, options),
         queryFn: () => searchTextes(query, options),
         enabled: query.length > 0,
+    });
+}
+
+export function useSuggestions(query: string) {
+    return useQuery<SearchResponse>({
+        queryKey: queryKeys.suggestions.query(query),
+        queryFn: () => searchSuggestions(query),
+        enabled: query.trim().length >= 2,
+        staleTime: 30_000,
+        gcTime: 60_000,
+        placeholderData: (prev) => prev,
     });
 }
 

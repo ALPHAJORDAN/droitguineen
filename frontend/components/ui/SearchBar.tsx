@@ -1,9 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { Search } from "lucide-react"
+import { Search, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
+import { useSuggestions } from "@/lib/hooks"
+import { NATURE_LABELS, type SearchHit, type ArticleHit, type Texte } from "@/lib/api"
 
 interface SearchBarProps extends React.HTMLAttributes<HTMLDivElement> {
     onSearch?: (query: string) => void;
@@ -19,13 +21,119 @@ const quickFilters = [
     { label: "Jurisprudence", href: "/recherche?type=Jurisprudence" },
 ];
 
+function SuggestionArticle({ article }: { article: ArticleHit }) {
+    const preview = article._formatted?.contenu || article.contenu;
+    const plainPreview = preview.replace(/<[^>]+>/g, "").slice(0, 80);
+
+    return (
+        <>
+            <div className="flex-shrink-0 mt-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-blue-500" />
+            </div>
+            <div className="min-w-0">
+                <p className="text-sm font-medium truncate">
+                    Article {article.numero} — {article.texteTitre}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">
+                    {plainPreview}{plainPreview.length >= 80 ? "..." : ""}
+                </p>
+            </div>
+        </>
+    );
+}
+
+function SuggestionTexte({ texte }: { texte: Texte & { type: "texte" } }) {
+    return (
+        <>
+            <div className="flex-shrink-0 mt-1">
+                <span className="inline-block w-2 h-2 rounded-full bg-primary" />
+            </div>
+            <div className="min-w-0">
+                <p className="text-sm font-medium truncate">{texte.titre}</p>
+                <span className="text-xs px-1.5 py-0.5 bg-muted rounded text-muted-foreground">
+                    {NATURE_LABELS[texte.nature] || texte.nature}
+                </span>
+            </div>
+        </>
+    );
+}
+
 export function SearchBar({ className, onSearch, defaultValue = "", showFilters = true, ...props }: SearchBarProps) {
     const [query, setQuery] = React.useState(defaultValue);
     const [isFocused, setIsFocused] = React.useState(false);
+    const [debouncedQuery, setDebouncedQuery] = React.useState("");
+    const [showSuggestions, setShowSuggestions] = React.useState(false);
+    const [selectedIndex, setSelectedIndex] = React.useState(-1);
+    const containerRef = React.useRef<HTMLDivElement>(null);
+    const debounceTimerRef = React.useRef<ReturnType<typeof setTimeout>>(null);
     const router = useRouter();
+
+    const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestions(debouncedQuery);
+    const suggestions: SearchHit[] = suggestionsData?.hits ?? [];
+
+    // Click-outside handler
+    React.useEffect(() => {
+        function handleClickOutside(e: MouseEvent) {
+            if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+                setShowSuggestions(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        setQuery(value);
+        setSelectedIndex(-1);
+
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+        }
+
+        if (value.trim().length >= 2) {
+            debounceTimerRef.current = setTimeout(() => {
+                setDebouncedQuery(value.trim());
+                setShowSuggestions(true);
+            }, 300);
+        } else {
+            setShowSuggestions(false);
+            setDebouncedQuery("");
+        }
+    };
+
+    const navigateToHit = (hit: SearchHit) => {
+        setShowSuggestions(false);
+        if (hit.type === "article") {
+            router.push(`/lois/${hit.texteId}`);
+        } else {
+            router.push(`/lois/${hit.id}`);
+        }
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === "Escape") {
+            setShowSuggestions(false);
+            setSelectedIndex(-1);
+            return;
+        }
+        if (!showSuggestions || suggestions.length === 0) return;
+
+        if (e.key === "ArrowDown") {
+            e.preventDefault();
+            setSelectedIndex(prev => Math.min(prev + 1, suggestions.length - 1));
+        } else if (e.key === "ArrowUp") {
+            e.preventDefault();
+            setSelectedIndex(prev => Math.max(prev - 1, -1));
+        } else if (e.key === "Enter" && selectedIndex >= 0) {
+            e.preventDefault();
+            navigateToHit(suggestions[selectedIndex]);
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        setShowSuggestions(false);
         if (query.trim()) {
             if (onSearch) {
                 onSearch(query);
@@ -40,55 +148,117 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
     };
 
     return (
-        <div className={cn("w-full space-y-6", className)} {...props}>
+        <div ref={containerRef} className={cn("w-full space-y-6", className)} {...props}>
             {/* Main Search Bar */}
             <form onSubmit={handleSubmit} className="w-full">
-                <div
-                    className={cn(
-                        "relative w-full max-w-3xl mx-auto",
-                        "bg-card rounded-full shadow-lg",
-                        "transition-all duration-300 ease-out",
-                        isFocused && "shadow-2xl scale-[1.02]"
-                    )}
-                >
-                    <div className="flex items-center h-14 sm:h-16 px-6 gap-4">
-                        <Search className={cn(
-                            "h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 transition-colors duration-200",
-                            isFocused ? "text-primary" : "text-muted-foreground"
-                        )} />
-                        <input
-                            type="text"
-                            placeholder="Rechercher une loi, un code, un decret..."
-                            className="flex-1 bg-transparent text-base sm:text-lg outline-none placeholder:text-muted-foreground"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
-                            onFocus={() => setIsFocused(true)}
-                            onBlur={() => setIsFocused(false)}
-                        />
-                        {query && (
-                            <button
-                                type="button"
-                                onClick={() => setQuery("")}
-                                className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-accent"
-                                aria-label="Effacer"
-                            >
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
+                <div className="relative w-full max-w-3xl mx-auto">
+                    <div
+                        className={cn(
+                            "bg-card shadow-lg",
+                            "transition-all duration-300 ease-out",
+                            showSuggestions && suggestions.length > 0
+                                ? "rounded-t-3xl shadow-2xl"
+                                : "rounded-full",
+                            isFocused && !showSuggestions && "shadow-2xl scale-[1.02]"
                         )}
-                        <button
-                            type="submit"
-                            className={cn(
-                                "flex-shrink-0 px-4 sm:px-6 py-2 rounded-full text-sm font-medium",
-                                "bg-primary text-primary-foreground hover:bg-primary/90",
-                                "transition-all duration-200"
+                    >
+                        <div className="flex items-center h-14 sm:h-16 px-6 gap-4">
+                            <Search className={cn(
+                                "h-5 w-5 sm:h-6 sm:w-6 flex-shrink-0 transition-colors duration-200",
+                                isFocused ? "text-primary" : "text-muted-foreground"
+                            )} />
+                            <input
+                                type="text"
+                                placeholder="Rechercher une loi, un code, un decret..."
+                                className="flex-1 bg-transparent text-base sm:text-lg outline-none placeholder:text-muted-foreground"
+                                value={query}
+                                onChange={handleInputChange}
+                                onFocus={() => {
+                                    setIsFocused(true);
+                                    if (debouncedQuery.length >= 2) setShowSuggestions(true);
+                                }}
+                                onBlur={() => setIsFocused(false)}
+                                onKeyDown={handleKeyDown}
+                            />
+                            {query && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setQuery("");
+                                        setDebouncedQuery("");
+                                        setShowSuggestions(false);
+                                    }}
+                                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-accent"
+                                    aria-label="Effacer"
+                                >
+                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             )}
-                        >
-                            <Search className="h-4 w-4 sm:hidden" />
-                            <span className="hidden sm:inline">Rechercher</span>
-                        </button>
+                            <button
+                                type="submit"
+                                className={cn(
+                                    "flex-shrink-0 px-4 sm:px-6 py-2 rounded-full text-sm font-medium",
+                                    "bg-primary text-primary-foreground hover:bg-primary/90",
+                                    "transition-all duration-200"
+                                )}
+                            >
+                                <Search className="h-4 w-4 sm:hidden" />
+                                <span className="hidden sm:inline">Rechercher</span>
+                            </button>
+                        </div>
                     </div>
+
+                    {/* Suggestions Dropdown */}
+                    {showSuggestions && debouncedQuery.length >= 2 && (
+                        <div className="absolute left-0 right-0 z-50 bg-card border-t border-border/50 rounded-b-2xl shadow-2xl overflow-hidden">
+                            {suggestionsLoading && suggestions.length === 0 ? (
+                                <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                                    <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                                    Recherche...
+                                </div>
+                            ) : suggestions.length === 0 ? (
+                                <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                                    Aucun resultat pour &laquo; {debouncedQuery} &raquo;
+                                </div>
+                            ) : (
+                                <>
+                                    {suggestions.map((hit, index) => (
+                                        <button
+                                            key={`${hit.type}-${hit.id}`}
+                                            className={cn(
+                                                "w-full text-left px-4 py-3 flex items-start gap-3",
+                                                "hover:bg-accent/50 transition-colors border-b border-border/30 last:border-b-0",
+                                                selectedIndex === index && "bg-accent/50"
+                                            )}
+                                            onMouseEnter={() => setSelectedIndex(index)}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                navigateToHit(hit);
+                                            }}
+                                        >
+                                            {hit.type === "article" ? (
+                                                <SuggestionArticle article={hit as ArticleHit} />
+                                            ) : (
+                                                <SuggestionTexte texte={hit as Texte & { type: "texte" }} />
+                                            )}
+                                        </button>
+                                    ))}
+                                    <button
+                                        onMouseDown={(e) => {
+                                            e.preventDefault();
+                                            setShowSuggestions(false);
+                                            router.push(`/recherche?q=${encodeURIComponent(debouncedQuery)}`);
+                                        }}
+                                        className="w-full text-center px-4 py-2.5 text-sm text-primary font-medium hover:bg-accent/30 transition-colors border-t border-border/50"
+                                    >
+                                        Voir tous les resultats pour &laquo; {debouncedQuery} &raquo;
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    )}
                 </div>
             </form>
 
