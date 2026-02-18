@@ -30,6 +30,8 @@ export async function initMeiliSearch(): Promise<Index> {
             textesIndex = meiliClient.index(TEXTES_INDEX_NAME);
         }
 
+        // Searchable attributes ordered by relevance (most important first)
+        // Removed 'articles' - article content is searched via the dedicated articles index
         await textesIndex.updateSearchableAttributes([
             'titre',
             'titreComplet',
@@ -37,8 +39,26 @@ export async function initMeiliSearch(): Promise<Index> {
             'nor',
             'visas',
             'signataires',
-            'articles',
         ]);
+
+        // Ranking rules: prioritize exact matches and attribute order
+        await textesIndex.updateRankingRules([
+            'words',
+            'typo',
+            'proximity',
+            'attribute',
+            'sort',
+            'exactness',
+        ]);
+
+        // Stricter typo tolerance for legal precision
+        await textesIndex.updateTypoTolerance({
+            enabled: true,
+            minWordSizeForTypos: {
+                oneTypo: 5,    // Only allow 1 typo for words >= 5 chars
+                twoTypos: 9,   // Only allow 2 typos for words >= 9 chars
+            },
+        });
 
         await textesIndex.updateFilterableAttributes([
             'nature',
@@ -98,10 +118,29 @@ async function initArticlesIndex(): Promise<Index> {
     }
 
     await articlesIndex.updateSearchableAttributes([
-        'numero',
-        'texteTitre',
         'contenu',
+        'texteTitre',
+        'numero',
     ]);
+
+    // Ranking rules for articles
+    await articlesIndex.updateRankingRules([
+        'words',
+        'typo',
+        'proximity',
+        'attribute',
+        'sort',
+        'exactness',
+    ]);
+
+    // Stricter typo tolerance
+    await articlesIndex.updateTypoTolerance({
+        enabled: true,
+        minWordSizeForTypos: {
+            oneTypo: 5,
+            twoTypos: 9,
+        },
+    });
 
     await articlesIndex.updateFilterableAttributes([
         'texteId',
@@ -245,6 +284,8 @@ export async function searchTextes(
         limit: options?.limit ?? 20,
         offset: options?.offset ?? 0,
         sort: ['datePublication:desc'],
+        matchingStrategy: 'last',
+        showRankingScore: true,
     });
 
     return {
@@ -294,6 +335,8 @@ export async function searchArticles(
         highlightPostTag: '</mark>',
         attributesToCrop: ['contenu'],
         cropLength: 200,
+        matchingStrategy: 'last',
+        showRankingScore: true,
     });
 
     return {

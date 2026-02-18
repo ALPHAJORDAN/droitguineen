@@ -34,24 +34,19 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
         dateFin: dateFin as string | undefined,
     };
 
-    // Split the limit between textes and articles so merged results respect limitNum
-    const articleLimit = Math.ceil(limitNum / 2);
-    const texteLimit = limitNum - articleLimit;
     const offset = (pageNum - 1) * limitNum;
-    const articleOffset = Math.floor(offset / 2);
-    const texteOffset = offset - articleOffset;
 
-    // Search textes and articles in parallel
+    // Fetch full limitNum from BOTH indexes, then merge by ranking score
     const [textesResult, articlesResult] = await Promise.all([
         searchTextes(q as string, {
             ...searchOptions,
-            limit: texteLimit,
-            offset: texteOffset,
+            limit: limitNum,
+            offset,
         }),
         searchArticles(q as string, {
             ...searchOptions,
-            limit: articleLimit,
-            offset: articleOffset,
+            limit: limitNum,
+            offset,
         }),
     ]);
 
@@ -66,8 +61,11 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
         type: 'article',
     }));
 
-    // Merge: articles first (more specific), then textes — total respects limitNum
-    const allHits = [...articleHits, ...texteHits].slice(0, limitNum);
+    // Merge by ranking score (descending) for relevance-based ordering
+    const allHits = [...texteHits, ...articleHits]
+        .sort((a: any, b: any) => (b._rankingScore ?? 0) - (a._rankingScore ?? 0))
+        .slice(0, limitNum);
+
     const totalEstimated = textesResult.estimatedTotalHits + articlesResult.estimatedTotalHits;
 
     res.json({
