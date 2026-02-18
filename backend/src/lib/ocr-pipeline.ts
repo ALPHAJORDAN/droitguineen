@@ -325,8 +325,13 @@ export function cleanText(rawText: string): string {
         .replace(/[\u00AD]/g, '')
         // Normaliser les espaces insécables
         .replace(/\u00A0/g, ' ')
-        // Restaurer les sauts de ligne pour les articles et sections
-        .replace(/\s*(Article\s+\d+)/gi, '\n\n$1')
+        // Supprimer les en-têtes/pieds de page (ex: "Page 43 sur 200")
+        .replace(/Page\s+\d+\s+sur\s+\d+/gi, '')
+        // Restaurer les sauts de ligne pour les en-têtes d'articles
+        // Seuls les vrais en-têtes : "Article X." ou "Article X :" ou "Article X\n" en début-ish de contexte
+        // On insère un saut de ligne SEULEMENT quand "Article N" est précédé d'un point/saut de ligne
+        // et suivi d'un point, deux-points, tiret ou saut de ligne (pas "à l'article 84 du présent code")
+        .replace(/(?:^|\n|\.)\s*(Article\s+(?:premier|1er|unique|\d+))\s*([.:\-])/gim, '\n\n$1$2')
         .replace(/\s*(TITRE\s+[IVX\d]+)/gi, '\n\n$1')
         .replace(/\s*(CHAPITRE\s+[IVX\d]+)/gi, '\n\n$1')
         .replace(/\s*(LIVRE\s+[IVX\d]+)/gi, '\n\n$1')
@@ -553,77 +558,134 @@ export function extractStructure(text: string): DocumentStructure {
     }
 
     // Extraction des articles
-    const articlePattern = /(?:Article|Art\.?)\s+(?:i+|premier|1er|unique|[\dIVXLCDM]+)(?:\s*[.:\-#]?\s*)[\s\S]*?(?=(?:Article|Art\.?)\s+(?:i+|premier|1er|unique|[\dIVXLCDM]+)|$)/gi;
+    // Stratégie : découper le texte ligne par ligne et détecter les en-têtes d'articles
+    // Un en-tête d'article doit être en DÉBUT DE LIGNE (après un saut de ligne)
+    // et suivi d'un point, deux-points, tiret ou saut de ligne
+    // Cela exclut les références comme "à l'article 84 du présent code"
+    const lines = text.split('\n');
+    const articleStarts: { lineIndex: number; numero: string; titre?: string }[] = [];
 
-    const articleMatches = text.match(articlePattern);
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        // L'en-tête d'article doit commencer au début de la ligne
+        // Formats acceptés : "Article 5.", "Article 5 :", "Article 5 -", "Article premier.", "Art. 5."
+        // On refuse les lignes qui commencent par des mots avant "Article" (ex: "à l'article 84")
+        const headerMatch = line.match(/^(?:Article|Art\.?)\s+(i+|premier|1er|unique|[\dIVXLCDM]+)\s*([.:\-]?\s*)(.*)?$/i);
+        if (!headerMatch) continue;
 
-    if (articleMatches) {
-        for (const articleText of articleMatches) {
-            // Extraire le numéro de l'article
-            const numeroMatch = articleText.match(/(?:Article|Art\.?)\s+(i+|premier|1er|unique|[\dIVXLCDM]+)/i);
-            if (!numeroMatch) continue;
-
-            let numero = numeroMatch[1];
-
-            // Normaliser les numéros
-            if (numero.toLowerCase() === 'premier' || numero === '1er') {
-                numero = '1';
-            } else if (numero.toLowerCase() === 'unique') {
-                numero = 'unique';
-            } else if (/^i+$/i.test(numero)) {
-                const romanMap: Record<string, number> = {
-                    'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5,
-                    'vi': 6, 'vii': 7, 'viii': 8, 'ix': 9, 'x': 10
-                };
-                const romanLower = numero.toLowerCase();
-                numero = (romanMap[romanLower] || numero).toString();
-            }
-
-            // Extraire le titre optionnel
-            const titleMatch = articleText.match(/(?:Article|Art\.?)\s+(?:i+|premier|1er|unique|[\dIVXLCDM]+)\s*[.:\-#]?\s*([^\n]+)?/i);
-            const titre = titleMatch && titleMatch[1] ? titleMatch[1].trim() : undefined;
-
-            // Extraire le contenu
-            const contentLines = articleText.split('\n');
-            const contenu = contentLines.slice(1).join('\n').trim()
-                .replace(/\s+/g, ' ')
-                .replace(/\s*#\s*/g, ' ')
-                .trim();
-
-            // Ignorer les articles vides ou de table des matières
-            if (contenu.length < 20 ||
-                /(\.{3,}|…)\s*\d+\s*$/.test(contenu) ||
-                /^\s*\d+\s*$/.test(contenu)) {
+        // Vérification supplémentaire : si la ligne précédente se termine par un mot comme
+        // "l'", "à l'", "de l'", "cet", "dudit", "ledit" → c'est une référence, pas un en-tête
+        if (i > 0) {
+            const prevLine = lines[i - 1].trim();
+            if (/(?:l['']|à\s+l['']|de\s+l['']|cet|dudit|ledit|audit|même|présent|dit)\s*$/i.test(prevLine)) {
                 continue;
             }
+        }
 
-            // Découper en alinéas
-            const alineas = contenu
-                .split(/\n+/)
-                .map(a => a.trim())
-                .filter(a => a.length > 0);
+        let numero = headerMatch[1];
 
-            const article: ArticleNode = {
-                id: uuidv4(),
-                numero,
-                titre,
-                contenu,
-                alineas: alineas.length > 0 ? alineas : [contenu],
-                etat: 'VIGUEUR',
-                references: []
+        // Normaliser les numéros
+        if (numero.toLowerCase() === 'premier' || numero === '1er') {
+            numero = '1';
+        } else if (numero.toLowerCase() === 'unique') {
+            numero = 'unique';
+        } else if (/^[ivxlcdm]+$/i.test(numero)) {
+            const romanMap: Record<string, number> = {
+                'i': 1, 'ii': 2, 'iii': 3, 'iv': 4, 'v': 5,
+                'vi': 6, 'vii': 7, 'viii': 8, 'ix': 9, 'x': 10,
+                'xi': 11, 'xii': 12, 'xiii': 13, 'xiv': 14, 'xv': 15,
+                'xvi': 16, 'xvii': 17, 'xviii': 18, 'xix': 19, 'xx': 20
             };
+            const romanLower = numero.toLowerCase();
+            numero = (romanMap[romanLower] || numero).toString();
+        }
 
-            // Détecter les références dans l'article
-            if (/abrog[ée]/i.test(contenu)) {
-                article.references.push({ type: 'abroge', texteRef: 'AUTO', description: 'Mentionné dans le texte' });
-            }
-            if (/modifi[ée]/i.test(contenu)) {
-                article.references.push({ type: 'modifie', texteRef: 'AUTO', description: 'Mentionné dans le texte' });
-            }
+        const titre = headerMatch[3]?.trim() || undefined;
+        articleStarts.push({ lineIndex: i, numero, titre: titre && titre.length > 2 ? titre : undefined });
+    }
 
-            structure.articles.push(article);
+    // Construire les articles à partir des positions trouvées
+    for (let a = 0; a < articleStarts.length; a++) {
+        const start = articleStarts[a];
+        const endLine = a + 1 < articleStarts.length ? articleStarts[a + 1].lineIndex : lines.length;
+
+        // Le contenu commence à la ligne après l'en-tête (ou sur la même ligne après le numéro)
+        const firstLine = lines[start.lineIndex].trim();
+        const afterHeader = firstLine.replace(/^(?:Article|Art\.?)\s+(?:i+|premier|1er|unique|[\dIVXLCDM]+)\s*[.:\-]?\s*/i, '').trim();
+
+        const contentParts: string[] = [];
+        if (afterHeader.length > 0) contentParts.push(afterHeader);
+        for (let l = start.lineIndex + 1; l < endLine; l++) {
+            const trimmed = lines[l].trim();
+            // Arrêter si on tombe sur un en-tête de section (TITRE, CHAPITRE, LIVRE, SECTION)
+            if (/^(?:TITRE|CHAPITRE|LIVRE|SECTION)\s+/i.test(trimmed) && trimmed === trimmed.toUpperCase()) {
+                break;
+            }
+            if (trimmed.length > 0) contentParts.push(trimmed);
+        }
+
+        const contenu = contentParts.join(' ')
+            .replace(/\s+/g, ' ')
+            .replace(/\s*#\s*/g, ' ')
+            .trim();
+
+        // Ignorer les articles vides ou de table des matières
+        if (contenu.length < 20 ||
+            /(\.{3,}|…)\s*\d+\s*$/.test(contenu) ||
+            /^\s*\d+\s*$/.test(contenu)) {
+            continue;
+        }
+
+        // Découper en alinéas
+        const alineas = contenu
+            .split(/\n+/)
+            .map(al => al.trim())
+            .filter(al => al.length > 0);
+
+        const article: ArticleNode = {
+            id: uuidv4(),
+            numero: start.numero,
+            titre: start.titre,
+            contenu,
+            alineas: alineas.length > 0 ? alineas : [contenu],
+            etat: 'VIGUEUR',
+            references: []
+        };
+
+        // Détecter les références dans l'article
+        if (/abrog[ée]/i.test(contenu)) {
+            article.references.push({ type: 'abroge', texteRef: 'AUTO', description: 'Mentionné dans le texte' });
+        }
+        if (/modifi[ée]/i.test(contenu)) {
+            article.references.push({ type: 'modifie', texteRef: 'AUTO', description: 'Mentionné dans le texte' });
+        }
+
+        structure.articles.push(article);
+    }
+
+    // Dédupliquer : si plusieurs articles ont le même numéro, garder le plus long (contenu le plus complet)
+    const articlesByNumero = new Map<string, ArticleNode[]>();
+    for (const art of structure.articles) {
+        const existing = articlesByNumero.get(art.numero) || [];
+        existing.push(art);
+        articlesByNumero.set(art.numero, existing);
+    }
+    structure.articles = [];
+    for (const [, arts] of articlesByNumero) {
+        if (arts.length === 1) {
+            structure.articles.push(arts[0]);
+        } else {
+            // Garder l'article avec le contenu le plus long
+            arts.sort((a, b) => b.contenu.length - a.contenu.length);
+            structure.articles.push(arts[0]);
         }
     }
+    // Trier par numéro
+    structure.articles.sort((a, b) => {
+        const na = parseInt(a.numero) || 0;
+        const nb = parseInt(b.numero) || 0;
+        return na - nb;
+    });
 
     return structure;
 }

@@ -97,8 +97,9 @@ async function initArticlesIndex(): Promise<Index> {
     }
 
     await articlesIndex.updateSearchableAttributes([
-        'contenu',
         'numero',
+        'texteTitre',
+        'contenu',
     ]);
 
     await articlesIndex.updateFilterableAttributes([
