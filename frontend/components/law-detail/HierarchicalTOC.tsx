@@ -1,7 +1,7 @@
 "use client";
 
 import { Section, Article } from "@/lib/api";
-import { ChevronRight, ChevronDown, List, X, FileText } from "lucide-react";
+import { ChevronRight, List, X, FileText } from "lucide-react";
 import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 
@@ -87,22 +87,33 @@ function FlatArticleList({
     activeArticle: string | null;
     onNavigate?: () => void;
 }) {
+    const handleClick = (e: React.MouseEvent, articleNumero: string) => {
+        e.preventDefault();
+        const el = document.getElementById(`article-${articleNumero}`);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.classList.add('article-flash');
+            setTimeout(() => el.classList.remove('article-flash'), 1500);
+        }
+        onNavigate?.();
+    };
+
     return (
         <div className="space-y-0.5">
             {articles.map((article) => (
-                <a
+                <button
                     key={article.id}
-                    href={`#article-${article.numero}`}
-                    onClick={onNavigate}
+                    data-toc-target={`article-${article.numero}`}
+                    onClick={(e) => handleClick(e, article.numero)}
                     className={cn(
-                        "block text-sm py-1.5 px-2 rounded-md transition-colors",
+                        "block w-full text-left text-sm py-1.5 px-3 rounded-md transition-all duration-200 relative",
                         activeArticle === `article-${article.numero}`
-                            ? "bg-primary/10 text-primary font-medium"
+                            ? "toc-item-active bg-primary/8 text-primary font-medium pl-4"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                     )}
                 >
                     Art. {article.numero}
-                </a>
+                </button>
             ))}
         </div>
     );
@@ -188,11 +199,12 @@ function SectionNode({
                 )}
             >
                 {hasContent ? (
-                    expanded ? (
-                        <ChevronDown className="h-3 w-3 flex-shrink-0" />
-                    ) : (
-                        <ChevronRight className="h-3 w-3 flex-shrink-0" />
-                    )
+                    <span className={cn(
+                        "flex-shrink-0 transition-transform duration-200",
+                        expanded && "rotate-90"
+                    )}>
+                        <ChevronRight className="h-3 w-3" />
+                    </span>
                 ) : (
                     <span className="w-3 flex-shrink-0" />
                 )}
@@ -216,19 +228,28 @@ function SectionNode({
             {expanded && hasArticles && !hasChildren && (
                 <div className="ml-6 space-y-0.5">
                     {section.articles!.map((article) => (
-                        <a
+                        <button
                             key={article.id}
-                            href={`#article-${article.numero}`}
-                            onClick={onNavigate}
+                            data-toc-target={`article-${article.numero}`}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                const el = document.getElementById(`article-${article.numero}`);
+                                if (el) {
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    el.classList.add('article-flash');
+                                    setTimeout(() => el.classList.remove('article-flash'), 1500);
+                                }
+                                onNavigate?.();
+                            }}
                             className={cn(
-                                "block text-xs py-1 px-2 rounded-md transition-colors",
+                                "block w-full text-left text-xs py-1 px-3 rounded-md transition-all duration-200 relative",
                                 activeArticle === `article-${article.numero}`
-                                    ? "bg-primary/10 text-primary font-medium"
+                                    ? "toc-item-active bg-primary/8 text-primary font-medium pl-4"
                                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                             )}
                         >
                             Art. {article.numero}
-                        </a>
+                        </button>
                     ))}
                 </div>
             )}

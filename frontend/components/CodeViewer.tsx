@@ -1,10 +1,10 @@
 "use client";
 
 import { Article } from "@/lib/api";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/Button";
-import { cn } from "@/lib/utils";
+import { cn, ETAT_STYLES } from "@/lib/utils";
 
 interface CodeViewerProps {
     articles: Article[];
@@ -164,7 +164,7 @@ export function CodeViewer({ articles, fontSize = 'sm', searchQuery = '' }: Code
     // Si tous les articles sont sans section, les afficher directement
     if (tree.length === 0 && unsectionedArticles.length > 0) {
         return (
-            <div className="space-y-4">
+            <div className="space-y-3">
                 {unsectionedArticles.map(article => (
                     <ArticleBlock key={article.id} article={article} fontSize={fontSize} searchQuery={searchQuery} />
                 ))}
@@ -207,9 +207,11 @@ export function CodeViewer({ articles, fontSize = 'sm', searchQuery = '' }: Code
             {unsectionedArticles.length > 0 && tree.length > 0 && (
                 <div className="mt-6 pt-6 border-t">
                     <h3 className="text-lg font-semibold mb-4">Articles hors sections</h3>
-                    {unsectionedArticles.map(article => (
-                        <ArticleBlock key={article.id} article={article} fontSize={fontSize} searchQuery={searchQuery} />
-                    ))}
+                    <div className="space-y-3">
+                        {unsectionedArticles.map(article => (
+                            <ArticleBlock key={article.id} article={article} fontSize={fontSize} searchQuery={searchQuery} />
+                        ))}
+                    </div>
                 </div>
             )}
         </div>
@@ -260,12 +262,12 @@ function SectionBlock({
     const hasArticles = section.articles.length > 0;
 
     const headerStyles = [
-        "text-xl font-bold text-primary border-b-2 border-primary/30 pb-2 mb-4", // LIVRE
-        "text-lg font-semibold text-primary/90 border-b border-primary/20 pb-1 mb-3", // TITRE
-        "text-base font-semibold text-foreground mb-2", // CHAPITRE
-        "text-sm font-medium text-muted-foreground italic mb-2", // SECTION
-        "text-sm text-muted-foreground mb-1", // PARAGRAPHE
-        "text-sm text-muted-foreground mb-1", // Autres
+        "text-xl font-bold text-primary", // LIVRE
+        "text-lg font-semibold text-primary/90", // TITRE
+        "text-base font-semibold text-foreground", // CHAPITRE
+        "text-sm font-medium text-muted-foreground italic", // SECTION
+        "text-sm text-muted-foreground", // PARAGRAPHE
+        "text-sm text-muted-foreground", // Autres
     ];
 
     // Adjust header sizes based on font size preference
@@ -293,32 +295,46 @@ function SectionBlock({
             <button
                 onClick={onToggle}
                 className={cn(
-                    "flex items-center w-full text-left cursor-pointer hover:bg-muted/50 rounded px-2 py-1 transition-colors",
+                    "flex items-center w-full text-left cursor-pointer",
+                    "rounded-lg px-3 py-2.5",
+                    "transition-all duration-200",
+                    "hover:bg-muted/60",
+                    "group/section",
                     adjustedHeaderStyles[Math.min(level, 5)]
                 )}
             >
-                <span className="mr-2 flex-shrink-0">
-                    {isOpen ? (
-                        <ChevronDown className="h-4 w-4" />
-                    ) : (
-                        <ChevronRight className="h-4 w-4" />
-                    )}
+                <span className={cn(
+                    "mr-2.5 flex-shrink-0 transition-transform duration-200",
+                    isOpen && "rotate-90"
+                )}>
+                    <ChevronRight className="h-4 w-4" />
                 </span>
-                <span className="flex-1">{section.titre}</span>
+                <span className="flex-1 tracking-tight">{section.titre}</span>
                 {hasArticles && (
-                    <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full ml-2">
+                    <span className={cn(
+                        "text-[11px] font-medium px-2 py-0.5 rounded-full ml-2",
+                        "bg-primary/8 text-primary/70",
+                        "group-hover/section:bg-primary/12",
+                        "transition-colors duration-150"
+                    )}>
                         {section.articles.length} art.
                     </span>
                 )}
             </button>
 
-            {isOpen && hasArticles && (
-                <div className="mt-2 space-y-4 border-l-2 border-primary/10 pl-4 ml-2">
-                    {section.articles.map(article => (
-                        <ArticleBlock key={article.id} article={article} fontSize={fontSize} searchQuery={searchQuery} />
-                    ))}
+            {/* Animated expand/collapse with CSS grid */}
+            <div
+                className="section-content-wrapper"
+                data-open={isOpen && hasArticles}
+            >
+                <div className="section-content-inner">
+                    <div className="space-y-3 pl-4 ml-2 pt-2">
+                        {section.articles.map(article => (
+                            <ArticleBlock key={article.id} article={article} fontSize={fontSize} searchQuery={searchQuery} />
+                        ))}
+                    </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 }
@@ -351,51 +367,111 @@ function ArticleBlock({ article, fontSize, searchQuery = '' }: { article: Articl
 
     const displayContent = shouldExpand || !isLongContent
         ? article.contenu
-        : article.contenu.substring(0, 500) + '...';
+        : article.contenu.substring(0, 500);
 
     const textSize = {
-        sm: 'text-sm',
-        md: 'text-base',
-        lg: 'text-lg'
+        sm: 'text-sm leading-relaxed',
+        md: 'text-base leading-relaxed',
+        lg: 'text-lg leading-loose'
     }[fontSize];
+
+    const isAbrogated = article.etat === 'ABROGE';
+    const etatStyle = article.etat && article.etat !== 'VIGUEUR'
+        ? ETAT_STYLES[article.etat] || "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+        : null;
 
     return (
         <div
             id={`article-${article.numero}`}
-            className="py-3 scroll-mt-24 group border-b border-muted last:border-0"
+            className={cn(
+                "article-card scroll-mt-24 group relative",
+                "rounded-xl border border-border/40 dark:border-border/20 bg-card",
+                "border-l-[3px] border-l-transparent",
+                "px-5 py-4",
+                "transition-all duration-200",
+                isAbrogated && "opacity-60",
+            )}
         >
-            <div className="flex items-center justify-between mb-2">
-                <h4 className={cn("font-bold text-primary flex items-center",
-                    fontSize === 'sm' ? 'text-base' : fontSize === 'md' ? 'text-lg' : 'text-xl'
-                )}>
-                    Article {article.numero}
+            {/* Article header */}
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                    {/* Article number badge */}
+                    <span className={cn(
+                        "inline-flex items-center justify-center",
+                        "min-w-[2.5rem] px-2.5 py-1",
+                        "rounded-lg text-xs font-bold tracking-wide",
+                        "bg-primary/10 text-primary",
+                        "dark:bg-primary/15 dark:text-primary",
+                        fontSize === 'lg' && "text-sm px-3 py-1.5"
+                    )}>
+                        {article.numero}
+                    </span>
+                    <h4 className={cn(
+                        "font-semibold text-foreground/90",
+                        fontSize === 'sm' ? 'text-sm' : fontSize === 'md' ? 'text-base' : 'text-lg'
+                    )}>
+                        Article {article.numero}
+                    </h4>
+                    {/* Permalink - visible on hover */}
                     <a
                         href={`#article-${article.numero}`}
-                        className="ml-2 opacity-0 group-hover:opacity-100 text-xs text-muted-foreground font-normal hover:underline transition-opacity"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground hover:text-primary"
+                        title="Lien permanent"
                     >
-                        #
+                        <Link2 className="h-3.5 w-3.5" />
                     </a>
-                </h4>
-                {article.etat && article.etat !== 'VIGUEUR' && (
-                    <span className="text-xs px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400">
+                </div>
+                {/* State badge */}
+                {etatStyle && (
+                    <span className={cn(
+                        "text-[11px] font-medium px-2.5 py-1 rounded-full",
+                        etatStyle
+                    )}>
                         {article.etat}
                     </span>
                 )}
             </div>
-            <div className={cn("prose dark:prose-invert max-w-none text-justify leading-relaxed", textSize)}>
+
+            {/* Divider */}
+            <div className="h-px bg-border/60 mb-3" />
+
+            {/* Article content */}
+            <div className={cn(
+                "prose dark:prose-invert max-w-none text-justify",
+                textSize,
+                !shouldExpand && isLongContent && "content-fade-mask",
+            )}>
                 {displayContent.split('\n').map((line, i) => (
-                    <p key={i} className="mb-1.5">
+                    <p key={i} className="mb-2 text-foreground/85">
                         {searchQuery ? <HighlightText text={line || '\u00A0'} query={searchQuery} /> : (line || '\u00A0')}
                     </p>
                 ))}
             </div>
+
+            {/* "Lire la suite" button */}
             {isLongContent && !hasSearchMatch && (
-                <button
-                    onClick={() => setIsExpanded(!isExpanded)}
-                    className="text-xs text-primary hover:underline mt-2"
-                >
-                    {isExpanded ? 'Voir moins' : 'Voir plus...'}
-                </button>
+                <div className={cn(
+                    "flex justify-center",
+                    !isExpanded ? "-mt-1 pt-2" : "mt-2"
+                )}>
+                    <button
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className={cn(
+                            "inline-flex items-center gap-1.5",
+                            "text-xs font-medium text-primary",
+                            "px-4 py-1.5 rounded-full",
+                            "bg-primary/5 hover:bg-primary/10",
+                            "transition-colors duration-150",
+                            "border border-primary/10"
+                        )}
+                    >
+                        {isExpanded ? (
+                            <>Voir moins <ChevronUp className="h-3 w-3" /></>
+                        ) : (
+                            <>Lire la suite <ChevronDown className="h-3 w-3" /></>
+                        )}
+                    </button>
+                </div>
             )}
         </div>
     );

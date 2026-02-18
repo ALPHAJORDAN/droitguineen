@@ -62,14 +62,26 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
         }
     }, [showExportMenu]);
 
-    // Track active article on scroll
+    // Track active article on scroll with DOM-direct class toggling for performance
     useEffect(() => {
         if (!texte?.articles?.length) return;
+        let currentActive: Element | null = null;
+
         const observer = new IntersectionObserver(
             (entries) => {
                 for (const entry of entries) {
                     if (entry.isIntersecting) {
+                        // Direct DOM manipulation to avoid re-rendering all articles
+                        currentActive?.classList.remove('article-active');
+                        entry.target.classList.add('article-active');
+                        currentActive = entry.target;
+                        // Update React state for TOC sync
                         setActiveArticle(entry.target.id);
+                        // Auto-scroll the TOC to keep active item visible
+                        const tocLink = document.querySelector(`[data-toc-target="${entry.target.id}"]`);
+                        if (tocLink) {
+                            tocLink.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                        }
                     }
                 }
             },
@@ -79,7 +91,10 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
             const el = document.getElementById(`article-${a.numero}`);
             if (el) observer.observe(el);
         });
-        return () => observer.disconnect();
+        return () => {
+            currentActive?.classList.remove('article-active');
+            observer.disconnect();
+        };
     }, [texte?.articles]);
 
     const handleExport = (format: 'pdf' | 'docx' | 'json' | 'html') => {
@@ -163,6 +178,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
 
     return (
         <div className="flex min-h-screen flex-col">
+            <ReadingProgress />
             <Script
                 id="legislation-schema"
                 type="application/ld+json"
@@ -412,4 +428,29 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
             )}
         </div>
     );
+}
+
+function ReadingProgress() {
+    const [progress, setProgress] = useState(0);
+
+    useEffect(() => {
+        let ticking = false;
+        const handleScroll = () => {
+            if (!ticking) {
+                requestAnimationFrame(() => {
+                    const scrollTop = window.scrollY;
+                    const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+                    setProgress(docHeight > 0 ? Math.min((scrollTop / docHeight) * 100, 100) : 0);
+                    ticking = false;
+                });
+                ticking = true;
+            }
+        };
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    if (progress <= 0) return null;
+
+    return <div className="reading-progress" style={{ width: `${progress}%` }} />;
 }

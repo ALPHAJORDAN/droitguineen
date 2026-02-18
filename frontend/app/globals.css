@@ -126,6 +126,90 @@
 }
 
 
+/* === Premium Article Reading Experience === */
+
+/* Reading progress bar */
+.reading-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 3px;
+  background: hsl(var(--primary));
+  z-index: 100;
+  transition: width 100ms ease-out;
+  border-radius: 0 2px 2px 0;
+}
+
+/* Article card */
+.article-card {
+  transition: box-shadow 200ms ease, border-color 200ms ease;
+}
+.article-card:hover {
+  box-shadow: 0 2px 8px -2px hsl(var(--primary) / 0.06),
+              0 4px 16px -4px hsl(var(--primary) / 0.04);
+}
+
+/* Active article indicator (applied via IntersectionObserver) */
+.article-active {
+  border-left-color: hsl(var(--primary)) !important;
+  box-shadow: -2px 0 12px -4px hsl(var(--primary) / 0.15),
+              0 1px 4px -1px hsl(var(--primary) / 0.05);
+}
+
+/* Gradient fade for truncated content */
+.content-fade-mask {
+  -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+  mask-image: linear-gradient(to bottom, black 50%, transparent 100%);
+}
+
+/* Animated section expand/collapse via CSS grid */
+.section-content-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 300ms cubic-bezier(0.4, 0, 0.2, 1),
+              opacity 250ms ease;
+  opacity: 0;
+}
+.section-content-wrapper[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.section-content-inner {
+  overflow: hidden;
+}
+
+/* TOC active item - animated left bar */
+.toc-item-active {
+  position: relative;
+}
+.toc-item-active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 3px;
+  border-radius: 2px;
+  background: hsl(var(--primary));
+}
+
+/* Article scroll target flash */
+.article-flash {
+  animation: article-ring-flash 1.5s ease-out forwards;
+}
+
+@keyframes article-ring-flash {
+  0% { box-shadow: 0 0 0 3px hsl(var(--primary) / 0.3); }
+  100% { box-shadow: 0 0 0 0px hsl(var(--primary) / 0); }
+}
+
+/* Print styles */
+@media print {
+  .reading-progress { display: none; }
+  .article-card:hover { box-shadow: none; }
+  .article-active { border-left-color: #000 !important; box-shadow: none; }
+}
+
 @layer base {
   * {
     @apply border-border;
