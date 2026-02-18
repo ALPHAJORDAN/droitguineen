@@ -105,7 +105,7 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
     const navigateToHit = (hit: SearchHit) => {
         setShowSuggestions(false);
         if (hit.type === "article") {
-            router.push(`/lois/${hit.texteId}`);
+            router.push(`/lois/${hit.texteId}?article=${hit.numero}`);
         } else {
             router.push(`/lois/${hit.id}`);
         }

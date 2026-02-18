@@ -5,6 +5,15 @@ import { log } from '../utils/logger';
 const SEARCH_URL = process.env.SEARCH_URL || 'http://localhost:7700';
 const MEILI_MASTER_KEY = process.env.MEILI_MASTER_KEY || '';
 
+// French stop words to ignore in search queries for better precision
+const FRENCH_STOP_WORDS = [
+    'au', 'aux', 'de', 'des', 'du', 'en', 'et', 'la', 'le', 'les',
+    'un', 'une', 'par', 'pour', 'sur', 'dans', 'avec', 'est', 'sont',
+    'ce', 'cette', 'ces', 'ou', 'qui', 'que', 'dont', 'il', 'elle',
+    'se', 'sa', 'son', 'ses', 'ne', 'pas', 'plus',
+    'article', 'articles', // noise in legal texts - "article" appears in nearly every document
+];
+
 export const meiliClient = new MeiliSearch({
     host: SEARCH_URL,
     apiKey: MEILI_MASTER_KEY,
@@ -59,6 +68,9 @@ export async function initMeiliSearch(): Promise<Index> {
                 twoTypos: 9,   // Only allow 2 typos for words >= 9 chars
             },
         });
+
+        // French stop words so "du", "de", "la" etc. don't pollute ranking
+        await textesIndex.updateStopWords(FRENCH_STOP_WORDS);
 
         await textesIndex.updateFilterableAttributes([
             'nature',
@@ -141,6 +153,9 @@ async function initArticlesIndex(): Promise<Index> {
             twoTypos: 9,
         },
     });
+
+    // French stop words
+    await articlesIndex.updateStopWords(FRENCH_STOP_WORDS);
 
     await articlesIndex.updateFilterableAttributes([
         'texteId',

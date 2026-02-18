@@ -20,6 +20,7 @@ import { EditModal } from "@/components/admin/EditModal";
 import { ToastProvider } from "@/components/admin/Toast";
 import { useAuth } from "@/lib/auth";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { cn, formatDate, ETAT_STYLES } from "@/lib/utils";
 import Script from "next/script";
 
@@ -38,6 +39,8 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
     const { data: relationsData } = useRelations(id);
     const { user } = useAuth();
     const exportMutation = useExport();
+    const searchParams = useSearchParams();
+    const articleParam = searchParams.get("article");
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [fontSize, setFontSize] = useState<'sm' | 'md' | 'lg'>('sm');
     const [copied, setCopied] = useState(false);
@@ -96,6 +99,21 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
             observer.disconnect();
         };
     }, [texte?.articles]);
+
+    // Scroll to specific article when navigating from search results
+    useEffect(() => {
+        if (!articleParam || !texte?.articles?.length) return;
+        // Delay to ensure DOM is rendered
+        const timer = setTimeout(() => {
+            const el = document.getElementById(`article-${articleParam}`);
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                el.classList.add('article-flash');
+                setTimeout(() => el.classList.remove('article-flash'), 1500);
+            }
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [articleParam, texte?.articles]);
 
     const handleExport = (format: 'pdf' | 'docx' | 'json' | 'html') => {
         exportMutation.mutate({ texteId: id, format });

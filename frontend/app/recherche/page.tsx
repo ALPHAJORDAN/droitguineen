@@ -151,7 +151,7 @@ function ArticleCard({ article }: { article: ArticleHit }) {
 
     return (
         <Link
-            href={`/lois/${article.texteId}`}
+            href={`/lois/${article.texteId}?article=${article.numero}`}
             className="group border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all bg-card block border-l-4 border-l-blue-400 dark:border-l-blue-500"
         >
             <div className="flex items-start gap-4">
