@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, FormEvent } from "react";
+import { Suspense, useState, useEffect, FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
@@ -32,17 +32,18 @@ function LoginPageContent() {
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // If already authenticated, redirect
-    if (authLoading) {
+    useEffect(() => {
+        if (!authLoading && isAuthenticated) {
+            router.replace(redirect);
+        }
+    }, [authLoading, isAuthenticated, redirect, router]);
+
+    if (authLoading || isAuthenticated) {
         return (
             <div className="min-h-screen flex items-center justify-center">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
-    }
-
-    if (isAuthenticated) {
-        router.replace(redirect);
-        return null;
     }
 
     async function handleSubmit(e: FormEvent) {
