@@ -47,20 +47,20 @@ const menuItems: MenuItem[] = [
         title: "Décrets",
         icon: <FileCheck className="h-4 w-4" />,
         children: [
-            { title: "Tous les décrets", href: "/recherche?type=Décrets" },
-            { title: "Décrets-lois", href: "/recherche?type=Décrets-lois" },
+            { title: "Tous les décrets", href: "/recherche?type=Decrets" },
+            { title: "Décrets-lois", href: "/recherche?type=Decrets-lois" },
         ],
     },
     {
         title: "Arrêtés",
-        href: "/recherche?type=Arrêtés",
+        href: "/recherche?type=Arretes",
         icon: <FileText className="h-4 w-4" />,
     },
     {
         title: "Décisions & Circulaires",
         icon: <ScrollText className="h-4 w-4" />,
         children: [
-            { title: "Décisions", href: "/recherche?type=Décisions" },
+            { title: "Décisions", href: "/recherche?type=Decisions" },
             { title: "Circulaires", href: "/recherche?type=Circulaires" },
         ],
     },
@@ -78,7 +78,7 @@ const menuItems: MenuItem[] = [
         title: "Traités & Conventions",
         icon: <FileText className="h-4 w-4" />,
         children: [
-            { title: "Traités", href: "/recherche?type=Traités" },
+            { title: "Traités", href: "/recherche?type=Traites" },
             { title: "Conventions", href: "/recherche?type=Conventions" },
         ],
     },
@@ -119,6 +119,8 @@ export function Sidebar({ className, onItemClick }: SidebarProps) {
                             <div>
                                 <button
                                     onClick={() => toggleItem(item.title)}
+                                    aria-expanded={openItems.includes(item.title)}
+                                    aria-label={`${item.title} — ${openItems.includes(item.title) ? 'replier' : 'déplier'}`}
                                     className={cn(
                                         "flex w-full items-center justify-between rounded-full px-4 py-3 text-sm font-medium transition-colors hover:bg-accent/50",
                                         openItems.includes(item.title) && "bg-accent text-accent-foreground font-semibold"

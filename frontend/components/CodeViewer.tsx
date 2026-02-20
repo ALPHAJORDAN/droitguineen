@@ -1,6 +1,6 @@
 "use client";
 
-import { Article } from "@/lib/api";
+import { Article, ETAT_LABELS } from "@/lib/api";
 import { ChevronRight, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { Button } from "@/components/ui/Button";
@@ -431,7 +431,7 @@ const ArticleBlock = memo(function ArticleBlock({ article, fontSize, searchQuery
                         "text-[11px] font-medium px-2.5 py-1 rounded-full",
                         etatStyle
                     )}>
-                        {article.etat}
+                        {ETAT_LABELS[article.etat] || article.etat}
                     </span>
                 )}
             </div>

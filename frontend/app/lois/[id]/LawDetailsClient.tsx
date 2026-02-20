@@ -199,13 +199,13 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                         <div>
                             <h2 className="font-semibold text-destructive">Erreur</h2>
                             <p className="text-muted-foreground">
-                                {error instanceof Error ? error.message : "Impossible de charger ce texte. Il n'existe peut-etre pas."}
+                                {error instanceof Error ? error.message : "Impossible de charger ce texte. Il n'existe peut-être pas."}
                             </p>
                         </div>
                     </div>
                     <Link href="/lois" className="inline-flex items-center gap-2 mt-6 text-primary hover:underline">
                         <ArrowLeft className="h-4 w-4" />
-                        Retour a la liste
+                        Retour à la liste
                     </Link>
                 </div>
                 <Footer />
@@ -455,7 +455,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                 <div>
                                     <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 rounded-lg p-3.5 mb-6 text-sm text-blue-800 dark:text-blue-300 flex items-center">
                                         <AlertCircle className="h-4 w-4 mr-2 flex-shrink-0" />
-                                        Cliquez sur les titres pour derouler le contenu. {articles.length} article{articles.length > 1 ? "s" : ""} au total.
+                                        Cliquez sur les titres pour dérouler le contenu. {articles.length} article{articles.length > 1 ? "s" : ""} au total.
                                     </div>
                                     <CodeViewer articles={articles} fontSize={fontSize} searchQuery={searchQuery} />
                                 </div>
@@ -463,7 +463,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                 <div className="text-center py-16 text-muted-foreground">
                                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                                     <p>Aucun article disponible pour ce texte.</p>
-                                    <p className="text-sm mt-1">Le contenu n&apos;a peut-etre pas encore ete extrait.</p>
+                                    <p className="text-sm mt-1">Le contenu n&apos;a peut-être pas encore été extrait.</p>
                                 </div>
                             )}
 
