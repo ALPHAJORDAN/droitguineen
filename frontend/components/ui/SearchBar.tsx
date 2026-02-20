@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useSuggestions } from "@/lib/hooks"
 import { NATURE_LABELS, type SearchHit, type ArticleHit, type Texte } from "@/lib/api"
+import DOMPurify from "isomorphic-dompurify"
 
 interface SearchBarProps extends React.HTMLAttributes<HTMLDivElement> {
     onSearch?: (query: string) => void;
@@ -23,7 +24,7 @@ const quickFilters = [
 
 function SuggestionArticle({ article }: { article: ArticleHit }) {
     const preview = article._formatted?.contenu || article.contenu;
-    const plainPreview = preview.replace(/<[^>]+>/g, "").slice(0, 80);
+    const plainPreview = DOMPurify.sanitize(preview, { ALLOWED_TAGS: [] }).slice(0, 80);
 
     return (
         <>
@@ -170,6 +171,7 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                             <input
                                 type="text"
                                 placeholder="Rechercher une loi, un code, un decret..."
+                                aria-label="Rechercher dans les textes juridiques"
                                 className="flex-1 bg-transparent text-base sm:text-lg outline-none placeholder:text-muted-foreground"
                                 value={query}
                                 onChange={handleInputChange}

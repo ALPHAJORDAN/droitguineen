@@ -1,4 +1,5 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
+import compression from 'compression';
 import cors from 'cors';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
@@ -54,6 +55,9 @@ export function createApp(): Application {
       maxAge: 86400, // 24 hours
     })
   );
+
+  // Gzip compression
+  app.use(compression());
 
   // Request logging
   app.use(requestLogger);
@@ -149,15 +153,18 @@ export function createApp(): Application {
   // Error handler (must be last)
   app.use(errorHandler);
 
-  // Cleanup expired refresh tokens every hour
+  // Cleanup expired refresh tokens every hour (with error tracking)
+  let tokenCleanupFailures = 0;
   setInterval(async () => {
     try {
       const result = await userRepository.deleteExpiredTokens();
+      tokenCleanupFailures = 0;
       if (result.count > 0) {
         logger.info(`Cleaned up ${result.count} expired refresh tokens`);
       }
     } catch (err) {
-      logger.warn('Failed to cleanup expired tokens');
+      tokenCleanupFailures++;
+      logger.error({ err, consecutiveFailures: tokenCleanupFailures }, 'Failed to cleanup expired tokens');
     }
   }, 60 * 60 * 1000);
 

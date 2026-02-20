@@ -320,14 +320,14 @@ class RelationService {
     const articles = texte.articles || [];
     const fullText = [texte.visas || '', ...articles.map((a) => a.contenu)].join('\n');
 
-    // Detection patterns
+    // Detection patterns (bounded quantifiers to prevent ReDoS)
     const patterns = {
       abrogation:
-        /abrog[éeant]+\s+(?:par\s+)?(?:la\s+|le\s+|l')?(?:loi|décret|ordonnance|arrêté)\s*(?:n[°o.]?\s*)?([A-Z0-9\/\-]+)?/gi,
+        /abrog[éeant]{1,6}\s+(?:par\s+)?(?:la\s+|le\s+|l')?(?:loi|décret|ordonnance|arrêté)\s*(?:n[°o.]?\s*)?([A-Z0-9\/\-]+)?/gi,
       modification:
-        /modifi[éeant]+\s+(?:par\s+)?(?:la\s+|le\s+|l')?(?:loi|décret|ordonnance|arrêté)\s*(?:n[°o.]?\s*)?([A-Z0-9\/\-]+)?/gi,
+        /modifi[éeant]{1,6}\s+(?:par\s+)?(?:la\s+|le\s+|l')?(?:loi|décret|ordonnance|arrêté)\s*(?:n[°o.]?\s*)?([A-Z0-9\/\-]+)?/gi,
       citation:
-        /(?:en\s+application\s+de|conformément\s+à|en\s+vertu\s+de|prévu[es]?\s+(?:à|par))\s+(?:la\s+|le\s+|l')?(?:loi|décret|ordonnance|arrêté|article)\s*(?:n[°o.]?\s*)?([A-Z0-9\/\-]+)?/gi,
+        /(?:en\s+application\s+de|conformément\s+à|en\s+vertu\s+de|prévu[es]{0,2}\s+(?:à|par))\s+(?:la\s+|le\s+|l')?(?:loi|décret|ordonnance|arrêté|article)\s*(?:n[°o.]?\s*)?([A-Z0-9\/\-]+)?/gi,
       reference:
         /(?:loi|décret|ordonnance|arrêté)\s*(?:n[°o.]?\s*)?([LODA]\/\d{4}\/\d{3}(?:\/[A-Z]+)?)/gi,
     };

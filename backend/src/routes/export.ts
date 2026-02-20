@@ -6,6 +6,7 @@ import { Router, Request, Response } from 'express';
 import prisma from '../lib/prisma';
 import { exportToPDF, exportToDOCX, ExportOptions } from '../lib/document-export';
 import { asyncHandler, AppError } from '../middlewares/error.middleware';
+import { validateId } from '../middlewares/validation.middleware';
 
 const router = Router();
 
@@ -79,16 +80,17 @@ const sectionsInclude = {
 
 /** Helper: create safe filename from title */
 function safeFilename(titre: string): string {
-    return (titre || 'Document')
+    const sanitized = (titre || '')
         .replace(/[^a-zA-Z0-9àâäéèêëïîôùûüçÀÂÄÉÈÊËÏÎÔÙÛÜÇ\s-]/g, '')
         .replace(/\s+/g, '_')
         .substring(0, 100);
+    return sanitized || 'Document';
 }
 
 /**
  * GET /export/pdf/:id - Exporter un texte en PDF
  */
-router.get('/pdf/:id', asyncHandler(async (req: Request, res: Response) => {
+router.get('/pdf/:id', validateId(), asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const {
         includeTableOfContents = 'true',
@@ -132,7 +134,7 @@ router.get('/pdf/:id', asyncHandler(async (req: Request, res: Response) => {
 /**
  * GET /export/docx/:id - Exporter un texte en DOCX
  */
-router.get('/docx/:id', asyncHandler(async (req: Request, res: Response) => {
+router.get('/docx/:id', validateId(), asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     const {
         includeTableOfContents = 'true',
@@ -174,7 +176,7 @@ router.get('/docx/:id', asyncHandler(async (req: Request, res: Response) => {
 /**
  * GET /export/json/:id - Exporter un texte en JSON structuré
  */
-router.get('/json/:id', asyncHandler(async (req: Request, res: Response) => {
+router.get('/json/:id', validateId(), asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const texte = await loadTexteForExport(`${id}:json`, {
@@ -255,7 +257,7 @@ router.get('/json/:id', asyncHandler(async (req: Request, res: Response) => {
 /**
  * GET /export/html/:id - Exporter un texte en HTML
  */
-router.get('/html/:id', asyncHandler(async (req: Request, res: Response) => {
+router.get('/html/:id', validateId(), asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
     const texte = await loadTexteForExport(id, {

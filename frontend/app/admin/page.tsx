@@ -14,6 +14,7 @@ import type { AdminTab } from "@/components/admin/types";
 import {
     Loader2, ShieldAlert, LayoutDashboard, FileText, Users,
 } from "lucide-react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 export default function AdminPage() {
     return (
@@ -110,9 +111,11 @@ function AdminPageContent() {
                     </div>
 
                     {/* Tab content */}
-                    {activeTab === "dashboard" && <DashboardTab />}
-                    {activeTab === "documents" && <DocumentsTab />}
-                    {activeTab === "users" && <UsersTab />}
+                    <ErrorBoundary>
+                        {activeTab === "dashboard" && <DashboardTab />}
+                        {activeTab === "documents" && <DocumentsTab />}
+                        {activeTab === "users" && <UsersTab />}
+                    </ErrorBoundary>
                 </main>
             </ToastProvider>
             <Footer />

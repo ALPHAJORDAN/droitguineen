@@ -376,6 +376,8 @@ function SearchFilters() {
                         <label className="text-xs text-muted-foreground mb-1 block">Du</label>
                         <input
                             type="date"
+                            max={filters.dateFin || undefined}
+                            aria-label="Date de debut"
                             className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             value={filters.dateDebut || ""}
                             onChange={(e) => updateFilter("dateDebut", e.target.value || null)}
@@ -385,6 +387,8 @@ function SearchFilters() {
                         <label className="text-xs text-muted-foreground mb-1 block">Au</label>
                         <input
                             type="date"
+                            min={filters.dateDebut || undefined}
+                            aria-label="Date de fin"
                             className="w-full border rounded-lg px-3 py-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             value={filters.dateFin || ""}
                             onChange={(e) => updateFilter("dateFin", e.target.value || null)}

@@ -783,10 +783,17 @@ export function getExportHtmlUrl(texteId: string): string {
     return `${API_BASE_URL}/export/html/${texteId}`;
 }
 
+let activeExportController: AbortController | null = null;
+
 export async function downloadExport(
     texteId: string,
     format: 'pdf' | 'docx' | 'json' | 'html'
 ): Promise<void> {
+    // Abort any previous export in progress
+    activeExportController?.abort();
+    const controller = new AbortController();
+    activeExportController = controller;
+
     const urls: Record<string, string> = {
         pdf: getExportPdfUrl(texteId),
         docx: getExportDocxUrl(texteId),
@@ -794,7 +801,7 @@ export async function downloadExport(
         html: getExportHtmlUrl(texteId),
     };
 
-    const res = await fetch(urls[format]);
+    const res = await fetch(urls[format], { signal: controller.signal });
     if (!res.ok) throw new Error(`Failed to export as ${format.toUpperCase()}`);
 
     const blob = await res.blob();
@@ -814,4 +821,5 @@ export async function downloadExport(
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    activeExportController = null;
 }

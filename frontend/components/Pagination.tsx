@@ -12,6 +12,11 @@ interface PaginationProps {
 export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
     if (totalPages <= 1) return null;
 
+    const handlePageChange = (page: number) => {
+        onPageChange(page);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
     return (
         <div className="flex items-center justify-between pt-6 mt-4 border-t">
             <p className="text-sm text-muted-foreground">
@@ -22,7 +27,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
                     variant="ghost"
                     size="sm"
                     disabled={currentPage <= 1}
-                    onClick={() => onPageChange(1)}
+                    onClick={() => handlePageChange(1)}
                     title="Premiere page"
                 >
                     <ChevronsLeft className="h-4 w-4" />
@@ -31,7 +36,8 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
                     variant="ghost"
                     size="sm"
                     disabled={currentPage <= 1}
-                    onClick={() => onPageChange(currentPage - 1)}
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    aria-label="Page precedente"
                 >
                     <ChevronLeft className="h-4 w-4" />
                     <span className="hidden sm:inline ml-1">Precedent</span>
@@ -43,7 +49,8 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
                     variant="ghost"
                     size="sm"
                     disabled={currentPage >= totalPages}
-                    onClick={() => onPageChange(currentPage + 1)}
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    aria-label="Page suivante"
                 >
                     <span className="hidden sm:inline mr-1">Suivant</span>
                     <ChevronRight className="h-4 w-4" />
@@ -52,7 +59,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
                     variant="ghost"
                     size="sm"
                     disabled={currentPage >= totalPages}
-                    onClick={() => onPageChange(totalPages)}
+                    onClick={() => handlePageChange(totalPages)}
                     title="Derniere page"
                 >
                     <ChevronsRight className="h-4 w-4" />

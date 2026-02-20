@@ -125,6 +125,7 @@ function LoisPageContent() {
                             type="text"
                             name="q"
                             placeholder="Rechercher un texte..."
+                            aria-label="Rechercher un texte"
                             className="w-full border rounded-lg pl-9 pr-4 py-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         />
                     </form>
@@ -133,6 +134,7 @@ function LoisPageContent() {
                         <select
                             value={`${filters.sort}:${filters.order}`}
                             onChange={(e) => handleSort(e.target.value)}
+                            aria-label="Trier par"
                             className="border rounded-lg px-3 py-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
                         >
                             {SORT_OPTIONS.map((opt) => (
@@ -183,16 +185,22 @@ function LoisPageContent() {
                 {/* Date range + active filters */}
                 <div className="flex flex-wrap items-center gap-3 mb-6">
                     <div className="flex items-center gap-2">
-                        <label className="text-xs text-muted-foreground">Du</label>
+                        <label htmlFor="filter-date-debut" className="text-xs text-muted-foreground">Du</label>
                         <input
+                            id="filter-date-debut"
                             type="date"
+                            aria-label="Date de debut"
+                            max={filters.dateFin || undefined}
                             className="border rounded-lg px-2 py-1.5 text-xs bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             value={filters.dateDebut}
                             onChange={(e) => updateFilter("dateDebut", e.target.value || null)}
                         />
-                        <label className="text-xs text-muted-foreground">au</label>
+                        <label htmlFor="filter-date-fin" className="text-xs text-muted-foreground">au</label>
                         <input
+                            id="filter-date-fin"
                             type="date"
+                            aria-label="Date de fin"
+                            min={filters.dateDebut || undefined}
                             className="border rounded-lg px-2 py-1.5 text-xs bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
                             value={filters.dateFin}
                             onChange={(e) => updateFilter("dateFin", e.target.value || null)}
