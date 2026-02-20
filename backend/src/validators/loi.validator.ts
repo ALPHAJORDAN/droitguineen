@@ -35,13 +35,16 @@ export const EtatArticleEnum = z.enum([
   'PERIME',
 ]);
 
+// Accept both "2024-01-15" (date) and "2024-01-15T00:00:00.000Z" (datetime)
+const dateString = z.string().date().or(z.string().datetime());
+
 // Article schema
 const articleSchema = z.object({
   numero: z.string().min(1, 'Numéro d\'article requis'),
   contenu: z.string().min(10, 'Le contenu doit faire au moins 10 caractères').max(500000),
   etat: EtatArticleEnum.optional(),
-  dateDebut: z.string().datetime().optional(),
-  dateFin: z.string().datetime().optional(),
+  dateDebut: dateString.optional(),
+  dateFin: dateString.optional(),
 });
 
 // Section schema
@@ -65,9 +68,9 @@ export const createLoiSchema = z.object({
   titreComplet: z.string().max(2000).optional().nullable(),
   nature: NatureEnum,
   numero: z.string().max(50).optional().nullable(),
-  dateSignature: z.string().datetime().optional().nullable(),
-  datePublication: z.string().datetime().optional().nullable(),
-  dateEntreeVigueur: z.string().datetime().optional().nullable(),
+  dateSignature: dateString.optional().nullable(),
+  datePublication: dateString.optional().nullable(),
+  dateEntreeVigueur: dateString.optional().nullable(),
   etat: EtatTexteEnum.default('VIGUEUR'),
   visas: z.string().max(10000).optional().nullable(),
   signataires: z.string().max(1000).optional().nullable(),
@@ -88,8 +91,8 @@ export const paginationSchema = z.object({
   nature: NatureEnum.optional(),
   etat: EtatTexteEnum.optional(),
   sousCategorie: z.string().optional(),
-  dateDebut: z.string().datetime().optional(),
-  dateFin: z.string().datetime().optional(),
+  dateDebut: dateString.optional(),
+  dateFin: dateString.optional(),
   sort: z
     .enum(['datePublication', 'dateSignature', 'createdAt', 'titre', 'numero'])
     .default('datePublication'),

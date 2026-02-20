@@ -78,7 +78,7 @@ export function errorHandler(
         return res.status(409).json({
           success: false,
           error: 'Conflit - Cette donnée existe déjà',
-          details: error.meta,
+          ...(process.env.NODE_ENV === 'development' && { details: error.meta }),
         });
       case 'P2025':
         return res.status(404).json({

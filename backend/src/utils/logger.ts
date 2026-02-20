@@ -51,6 +51,11 @@ export const logger = pino({
   },
 });
 
+/** Redact sensitive query parameters from URLs before logging */
+function sanitizeUrl(url: string): string {
+  return url.replace(/([?&])(password|token|key|secret|authorization)=[^&]*/gi, '$1$2=[REDACTED]');
+}
+
 export function requestLogger(req: Request, res: Response, next: NextFunction) {
   const start = Date.now();
   const requestId = `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -58,12 +63,14 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
   // Attach request ID
   (req as any).requestId = requestId;
 
+  const safeUrl = sanitizeUrl(req.url);
+
   // Log incoming request
   logger.info({
     requestId,
     type: 'request',
     method: req.method,
-    url: req.url,
+    url: safeUrl,
     ip: req.ip || req.socket.remoteAddress,
     userAgent: req.get('user-agent'),
   });
@@ -77,7 +84,7 @@ export function requestLogger(req: Request, res: Response, next: NextFunction) {
       requestId,
       type: 'response',
       method: req.method,
-      url: req.url,
+      url: safeUrl,
       status: res.statusCode,
       duration: `${duration}ms`,
     });
