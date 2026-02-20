@@ -15,7 +15,7 @@ async function startServer() {
     await initMeiliSearch();
     log.info('Meilisearch initialized successfully');
   } catch (error) {
-    log.warn('Failed to initialize Meilisearch (continuing anyway)', { error });
+    log.error('Failed to initialize Meilisearch — search will be unavailable', { error });
   }
 
   // Start server

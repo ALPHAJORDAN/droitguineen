@@ -116,6 +116,7 @@ function HeaderContent() {
                 <nav className="hidden md:flex items-center space-x-8 text-sm">
                     <Link
                         href="/lois"
+                        aria-current={isActive('/lois') ? "page" : undefined}
                         className={cn(
                             "relative py-1 transition-all hover:text-foreground",
                             isActive('/lois')
@@ -127,6 +128,7 @@ function HeaderContent() {
                     </Link>
                     <Link
                         href="/recherche?type=Codes"
+                        aria-current={isActive('/recherche?type=Codes') ? "page" : undefined}
                         className={cn(
                             "relative py-1 transition-all hover:text-foreground",
                             isActive('/recherche?type=Codes')
@@ -138,6 +140,7 @@ function HeaderContent() {
                     </Link>
                     <Link
                         href="/recherche?type=Jurisprudence"
+                        aria-current={isActive('/recherche?type=Jurisprudence') ? "page" : undefined}
                         className={cn(
                             "relative py-1 transition-all hover:text-foreground",
                             isActive('/recherche?type=Jurisprudence')
@@ -149,6 +152,7 @@ function HeaderContent() {
                     </Link>
                     <Link
                         href="/recherche"
+                        aria-current={pathname === '/recherche' && !searchParams.get('type') ? "page" : undefined}
                         className={cn(
                             "relative py-1 transition-all hover:text-foreground",
                             pathname === '/recherche' && !searchParams.get('type')

@@ -123,7 +123,7 @@ function ArticleCard({ article }: { article: ArticleHit }) {
                         {article.texteNumero && <span> &middot; N&deg; {article.texteNumero}</span>}
                     </p>
                     <div
-                        className="text-sm leading-relaxed line-clamp-3 [&_mark]:bg-yellow-200 [&_mark]:dark:bg-yellow-800 [&_mark]:px-0.5 [&_mark]:rounded-sm"
+                        className="text-sm leading-relaxed line-clamp-3 overflow-hidden [&_mark]:bg-yellow-200 [&_mark]:dark:bg-yellow-800 [&_mark]:px-0.5 [&_mark]:rounded-sm"
                         dangerouslySetInnerHTML={{ __html: displayContent }}
                     />
                 </div>
@@ -212,7 +212,7 @@ function SearchResultsWithPagination() {
             <div className="space-y-4">
                 {pagination && (
                     <div className="flex items-center justify-between">
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground" role="status" aria-live="polite">
                             {pagination.total} resultat{pagination.total > 1 ? "s" : ""}
                             {pagination.total > 20 && (
                                 <span> &middot; Affichage {start}-{end}</span>

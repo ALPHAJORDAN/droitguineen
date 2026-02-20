@@ -200,8 +200,11 @@ class RelationService {
       },
     });
 
-    // Recalculate target texte state based on all relations (handles precedence correctly)
-    await this.recalculateTexteState(data.texteCibleId);
+    // Recalculate target texte state only for state-affecting relations
+    const STATE_AFFECTING_TYPES: TypeRelation[] = ['ABROGE', 'ABROGE_PARTIELLEMENT', 'MODIFIE', 'COMPLETE', 'SUSPEND'];
+    if (STATE_AFFECTING_TYPES.includes(data.type)) {
+      await this.recalculateTexteState(data.texteCibleId);
+    }
 
     log.info('Relation created', {
       id: relation.id,
@@ -230,7 +233,7 @@ class RelationService {
           articleCibleNum: data.articleCibleNum,
           articleSourceNum: data.articleSourceNum,
           description: data.description,
-          dateEffet: data.dateEffet ? new Date(data.dateEffet) : undefined,
+          dateEffet: data.dateEffet !== undefined ? (data.dateEffet ? new Date(data.dateEffet) : null) : undefined,
         },
         include: {
           texteSource: { select: { id: true, titre: true } },
@@ -279,7 +282,7 @@ class RelationService {
   ): Promise<void> {
     const incomingRelations = await tx.texteRelation.findMany({
       where: { texteCibleId: texteId },
-      select: { type: true },
+      select: { type: true, dateEffet: true },
     });
 
     const types = new Set(incomingRelations.map(r => r.type));
@@ -293,11 +296,18 @@ class RelationService {
       newEtat = EtatTexte.VIGUEUR;
     }
 
+    // Set dateAbrogation from the ABROGE relation's dateEffet, or now() if none
+    let dateAbrogation: Date | null = null;
+    if (newEtat === EtatTexte.ABROGE) {
+      const abrogeRelation = incomingRelations.find(r => r.type === 'ABROGE');
+      dateAbrogation = abrogeRelation?.dateEffet || new Date();
+    }
+
     await tx.texte.update({
       where: { id: texteId },
       data: {
         etat: newEtat,
-        dateAbrogation: newEtat === EtatTexte.ABROGE ? undefined : null,
+        dateAbrogation,
       },
     });
   }

@@ -5,6 +5,10 @@ import { log } from '../utils/logger';
 const SEARCH_URL = process.env.SEARCH_URL || 'http://localhost:7700';
 const MEILI_MASTER_KEY = process.env.MEILI_MASTER_KEY || '';
 
+if (!MEILI_MASTER_KEY) {
+  log.warn('MEILI_MASTER_KEY not set — search requests may fail with authentication errors');
+}
+
 // French stop words to ignore in search queries for better precision
 const FRENCH_STOP_WORDS = [
     'au', 'aux', 'de', 'des', 'du', 'en', 'et', 'la', 'le', 'les',

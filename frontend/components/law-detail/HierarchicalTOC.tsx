@@ -197,6 +197,7 @@ function SectionNode({
         <div>
             <button
                 onClick={handleClick}
+                aria-expanded={hasContent ? expanded : undefined}
                 className={cn(
                     "flex items-center gap-1 w-full text-left py-1.5 px-2 rounded-md transition-colors hover:bg-muted/50",
                     labelStyle,

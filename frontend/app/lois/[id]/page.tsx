@@ -24,11 +24,15 @@ export async function generateMetadata({
                 publishedTime: texte.datePublication || undefined,
                 authors: texte.signataires ? [texte.signataires] : undefined,
                 tags: [natureLabel, "Guinée", "droit", "législation"],
+                siteName: "Droitguinéen",
+                locale: "fr_GN",
+                images: [{ url: "/og-image.png", width: 1200, height: 630, alt: texte.titre }],
             },
             twitter: {
-                card: "summary",
+                card: "summary_large_image",
                 title: texte.titre,
                 description: `${natureLabel} - Consultez le texte intégral`,
+                images: ["/og-image.png"],
             },
             alternates: {
                 canonical: `/lois/${resolvedParams.id}`,

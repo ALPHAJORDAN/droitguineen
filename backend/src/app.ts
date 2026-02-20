@@ -72,18 +72,20 @@ export function createApp(): Application {
   // Health check (before other routes, no rate limiting needed)
   app.get('/health', async (req, res) => {
     const checks: Record<string, 'ok' | 'error'> = {};
+    const withTimeout = <T>(promise: Promise<T>, ms: number): Promise<T> =>
+      Promise.race([promise, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))]);
 
-    // Check database connectivity
+    // Check database connectivity (5s timeout)
     try {
-      await prisma.$queryRaw`SELECT 1`;
+      await withTimeout(prisma.$queryRaw`SELECT 1`, 5000);
       checks.database = 'ok';
     } catch {
       checks.database = 'error';
     }
 
-    // Check Meilisearch connectivity
+    // Check Meilisearch connectivity (5s timeout)
     try {
-      await meiliClient.health();
+      await withTimeout(meiliClient.health(), 5000);
       checks.meilisearch = 'ok';
     } catch {
       checks.meilisearch = 'error';

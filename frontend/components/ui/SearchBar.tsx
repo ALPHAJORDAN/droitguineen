@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { Search, Loader2 } from "lucide-react"
+import { Search, Loader2, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useRouter } from "next/navigation"
 import { useSuggestions } from "@/lib/hooks"
@@ -193,9 +193,7 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                                     className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-accent"
                                     aria-label="Effacer"
                                 >
-                                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                    </svg>
+                                    <X className="h-5 w-5" />
                                 </button>
                             )}
                             <button
@@ -214,7 +212,7 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
 
                     {/* Suggestions Dropdown */}
                     {showSuggestions && debouncedQuery.length >= 2 && (
-                        <div className="absolute left-0 right-0 z-50 bg-card border-t border-border/50 rounded-b-2xl shadow-2xl overflow-hidden">
+                        <div role="listbox" aria-label="Suggestions de recherche" className="absolute left-0 right-0 z-50 bg-card border-t border-border/50 rounded-b-2xl shadow-2xl overflow-hidden">
                             {suggestionsLoading && suggestions.length === 0 ? (
                                 <div className="px-4 py-6 text-center text-sm text-muted-foreground">
                                     <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
@@ -250,6 +248,8 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                                                         )}
                                                         onMouseEnter={() => setSelectedIndex(idx)}
                                                         onMouseDown={(e) => { e.preventDefault(); navigateToHit(hit); }}
+                                                        role="option"
+                                                        aria-selected={selectedIndex === idx}
                                                     >
                                                         <SuggestionArticle article={hit as ArticleHit} />
                                                     </button>
@@ -275,6 +275,8 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                                                         )}
                                                         onMouseEnter={() => setSelectedIndex(idx)}
                                                         onMouseDown={(e) => { e.preventDefault(); navigateToHit(hit); }}
+                                                        role="option"
+                                                        aria-selected={selectedIndex === idx}
                                                     >
                                                         <SuggestionTexte texte={hit as Texte & { type: "texte" }} />
                                                     </button>
@@ -294,6 +296,11 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                                     >
                                         Voir tous les resultats pour &laquo; {debouncedQuery} &raquo;
                                     </button>
+                                    <div className="hidden sm:flex items-center justify-center gap-3 px-4 py-1.5 text-[10px] text-muted-foreground/50 border-t border-border/30">
+                                        <span><kbd className="px-1 py-0.5 rounded border border-border/50 font-mono">↑↓</kbd> naviguer</span>
+                                        <span><kbd className="px-1 py-0.5 rounded border border-border/50 font-mono">Entree</kbd> valider</span>
+                                        <span><kbd className="px-1 py-0.5 rounded border border-border/50 font-mono">Esc</kbd> fermer</span>
+                                    </div>
                                 </>
                             )}
                         </div>

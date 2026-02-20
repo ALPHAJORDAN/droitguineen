@@ -16,16 +16,17 @@ const MAX_CACHE_SIZE = 50;
 const exportCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
-async function loadTexteForExport(id: string, include: object) {
+async function loadTexteForExport(id: string, include: object, format: string = 'default') {
+    const cacheKey = `${id}:${format}`;
     const now = Date.now();
-    const cached = exportCache.get(id);
+    const cached = exportCache.get(cacheKey);
     if (cached && now - cached.timestamp < CACHE_TTL) {
         return cached.data;
     }
 
     const texte = await prisma.texte.findUnique({ where: { id }, include });
     if (texte) {
-        exportCache.set(id, { data: texte, timestamp: now });
+        exportCache.set(cacheKey, { data: texte, timestamp: now });
         // Eviction: remove expired entries first, then oldest (by insertion order) if still over limit
         if (exportCache.size > MAX_CACHE_SIZE) {
             const expiredKeys: string[] = [];
@@ -124,7 +125,7 @@ router.get('/pdf/:id', validateId(), asyncHandler(async (req: Request, res: Resp
             where: { sectionId: null }
         },
         sections: sectionsInclude
-    });
+    }, 'pdf');
 
     if (!texte) {
         throw new AppError(404, 'Texte non trouvé');
@@ -166,7 +167,7 @@ router.get('/docx/:id', validateId(), asyncHandler(async (req: Request, res: Res
             where: { sectionId: null }
         },
         sections: sectionsInclude
-    });
+    }, 'docx');
 
     if (!texte) {
         throw new AppError(404, 'Texte non trouvé');
@@ -187,7 +188,7 @@ router.get('/docx/:id', validateId(), asyncHandler(async (req: Request, res: Res
 router.get('/json/:id', validateId(), asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const texte = await loadTexteForExport(`${id}:json`, {
+    const texte = await loadTexteForExport(id, {
         articles: {
             orderBy: { ordre: 'asc' },
             select: {
@@ -216,7 +217,7 @@ router.get('/json/:id', validateId(), asyncHandler(async (req: Request, res: Res
                 }
             }
         }
-    });
+    }, 'json');
 
     if (!texte) {
         throw new AppError(404, 'Texte non trouvé');
@@ -274,7 +275,7 @@ router.get('/html/:id', validateId(), asyncHandler(async (req: Request, res: Res
             where: { sectionId: null }
         },
         sections: sectionsInclude
-    });
+    }, 'html');
 
     if (!texte) {
         throw new AppError(404, 'Texte non trouvé');
