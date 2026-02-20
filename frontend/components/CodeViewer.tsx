@@ -384,7 +384,7 @@ function ArticleBlock({ article, fontSize, searchQuery = '' }: { article: Articl
         <div
             id={`article-${article.numero}`}
             className={cn(
-                "article-card scroll-mt-24 group relative",
+                "article-card scroll-mt-32 group relative",
                 "rounded-xl border border-border/40 dark:border-border/20 bg-card",
                 "border-l-[3px] border-l-transparent",
                 "px-5 py-4",
