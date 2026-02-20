@@ -31,8 +31,8 @@ export function Header() {
 function HeaderSkeleton() {
     return (
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
-            <div className="container flex h-14 items-center">
-                <div className="mr-2 p-2"><Menu className="h-5 w-5" /></div>
+            <div className="container flex h-16 items-center px-4 md:px-6">
+                <div className="mr-3 p-2.5 -ml-2"><Menu className="h-5 w-5" /></div>
                 <div className="flex items-center space-x-2 mr-6">
                     <div className="w-8 h-8 bg-muted rounded" />
                     <span className="font-semibold text-lg hidden sm:inline-block">Droitguinéen</span>
@@ -72,10 +72,10 @@ function HeaderContent() {
             <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:text-sm">
                 Aller au contenu principal
             </a>
-            <div className="container flex h-14 items-center">
+            <div className="container flex h-16 items-center px-4 md:px-6">
                 <Sheet open={open} onOpenChange={setOpen}>
                     <SheetTrigger asChild>
-                        <button className="mr-2 p-2 hover:bg-accent rounded-full transition-colors">
+                        <button className="mr-3 p-2.5 -ml-2 hover:bg-accent rounded-full transition-colors">
                             <Menu className="h-5 w-5" />
                             <span className="sr-only">Menu</span>
                         </button>
