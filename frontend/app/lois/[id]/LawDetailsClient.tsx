@@ -7,9 +7,10 @@ import { useLoi, useRelations, useExport } from "@/lib/hooks";
 import { NATURE_LABELS, ETAT_LABELS, Texte } from "@/lib/api";
 import {
     ChevronRight, FileText, Share2, Printer, Calendar, AlertCircle, ArrowLeft,
-    Loader2, FileDown, Type, Scale, BookOpen, Gavel, FileCheck,
+    Loader2, FileDown, Type,
     Clock, User, Hash, BookMarked, ExternalLink, Pencil, Download,
 } from "lucide-react";
+import { getNatureIcon } from "@/lib/constants";
 import Link from "next/link";
 import { CodeViewer } from "@/components/CodeViewer";
 import { HierarchicalTOC } from "@/components/law-detail/HierarchicalTOC";
@@ -19,20 +20,10 @@ import { RelationsPanel } from "@/components/law-detail/RelationsPanel";
 import { EditModal } from "@/components/admin/EditModal";
 import { ToastProvider } from "@/components/admin/Toast";
 import { useAuth } from "@/lib/auth";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { cn, formatDate, ETAT_STYLES } from "@/lib/utils";
 import Script from "next/script";
-
-const NATURE_ICONS: Record<string, React.ReactNode> = {
-    LOI: <Scale className="h-6 w-6" />,
-    LOI_ORGANIQUE: <Scale className="h-6 w-6" />,
-    LOI_CONSTITUTIONNELLE: <BookOpen className="h-6 w-6" />,
-    ORDONNANCE: <Gavel className="h-6 w-6" />,
-    DECRET: <FileCheck className="h-6 w-6" />,
-    CODE: <BookOpen className="h-6 w-6" />,
-    ARRETE: <FileText className="h-6 w-6" />,
-};
 
 export function LawDetailsClient({ id, initialData }: { id: string; initialData?: Texte }) {
     const { data: texte, isLoading, isError, error } = useLoi(id, initialData);
@@ -151,14 +142,15 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
         setSearchQuery(query);
     }, []);
 
-    // Count articles matching search
     const articles = texte?.articles || [];
-    const searchResultCount = searchQuery.trim()
-        ? articles.filter(a =>
-            a.contenu.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            a.numero.toLowerCase().includes(searchQuery.toLowerCase())
-        ).length
-        : 0;
+    const searchResultCount = useMemo(() => {
+        if (!searchQuery.trim()) return 0;
+        const q = searchQuery.toLowerCase();
+        return articles.filter(a =>
+            a.contenu.toLowerCase().includes(q) ||
+            a.numero.toLowerCase().includes(q)
+        ).length;
+    }, [articles, searchQuery]);
 
     if (isLoading) {
         return (
@@ -249,7 +241,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                         <div className="flex items-start gap-5">
                             {/* Nature icon */}
                             <div className="hidden sm:flex p-4 bg-primary/10 rounded-2xl text-primary flex-shrink-0">
-                                {NATURE_ICONS[texte.nature] || <FileText className="h-6 w-6" />}
+                                {getNatureIcon(texte.nature, "md")}
                             </div>
 
                             <div className="flex-1 min-w-0">

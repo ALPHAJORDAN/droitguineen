@@ -3,33 +3,15 @@
 import { Header } from "@/components/ui/Header";
 import { Footer } from "@/components/ui/Footer";
 import { Button } from "@/components/ui/Button";
+import { TexteCard } from "@/components/TexteCard";
+import { Pagination } from "@/components/Pagination";
+import { LoadingState, ErrorAlert, EmptyState } from "@/components/ui/StateDisplay";
 import { useLois } from "@/lib/hooks";
 import { NATURE_LABELS, ETAT_LABELS, Texte } from "@/lib/api";
-import { formatDate, ETAT_STYLES } from "@/lib/utils";
 import Link from "next/link";
-import {
-    Scale, FileText, BookOpen, Calendar, ArrowRight, AlertCircle, Loader2,
-    Gavel, FileCheck, ScrollText, Search, ArrowUpDown, X,
-    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-} from "lucide-react";
+import { FileText, Search, ArrowUpDown, X, Loader2 } from "lucide-react";
 import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-
-const NATURE_ICONS: Record<string, React.ReactNode> = {
-    LOI: <Scale className="h-5 w-5" />,
-    LOI_ORGANIQUE: <Scale className="h-5 w-5" />,
-    LOI_CONSTITUTIONNELLE: <BookOpen className="h-5 w-5" />,
-    ORDONNANCE: <Gavel className="h-5 w-5" />,
-    DECRET: <FileCheck className="h-5 w-5" />,
-    DECRET_LOI: <FileCheck className="h-5 w-5" />,
-    ARRETE: <FileText className="h-5 w-5" />,
-    CIRCULAIRE: <FileText className="h-5 w-5" />,
-    DECISION: <FileText className="h-5 w-5" />,
-    CONVENTION: <ScrollText className="h-5 w-5" />,
-    TRAITE: <ScrollText className="h-5 w-5" />,
-    CODE: <BookOpen className="h-5 w-5" />,
-    JURISPRUDENCE: <Gavel className="h-5 w-5" />,
-};
 
 const ALL_NATURES = [
     "LOI_CONSTITUTIONNELLE", "LOI", "LOI_ORGANIQUE", "ORDONNANCE",
@@ -228,21 +210,15 @@ function LoisPageContent() {
 
                 {/* Error State */}
                 {isError && (
-                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 mb-6 flex items-center gap-3">
-                        <AlertCircle className="h-5 w-5 text-destructive" />
-                        <p className="text-destructive">
-                            {error instanceof Error ? error.message : "Impossible de charger les textes. Verifiez que le serveur backend est demarre."}
-                        </p>
+                    <div className="mb-6">
+                        <ErrorAlert
+                            message={error instanceof Error ? error.message : "Impossible de charger les textes. Verifiez que le serveur backend est demarre."}
+                        />
                     </div>
                 )}
 
                 {/* Loading State */}
-                {isLoading && (
-                    <div className="flex items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <span className="ml-2 text-muted-foreground">Chargement des textes...</span>
-                    </div>
-                )}
+                {isLoading && <LoadingState message="Chargement des textes..." />}
 
                 {/* Results info */}
                 {!isLoading && !isError && pagination && (
@@ -260,59 +236,14 @@ function LoisPageContent() {
                 {!isLoading && !isError && (
                     <div className="space-y-3">
                         {textes.length === 0 ? (
-                            <div className="text-center py-12 text-muted-foreground">
-                                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                <p className="text-lg font-medium">Aucun texte trouve</p>
-                                <p className="text-sm mt-1">
-                                    {hasFilters ? "Essayez de modifier vos filtres." : "Aucun texte disponible pour le moment."}
-                                </p>
-                            </div>
+                            <EmptyState
+                                icon={<FileText className="h-12 w-12 opacity-50" />}
+                                title="Aucun texte trouve"
+                                description={hasFilters ? "Essayez de modifier vos filtres." : "Aucun texte disponible pour le moment."}
+                            />
                         ) : (
                             textes.map((texte: Texte) => (
-                                <Link
-                                    key={texte.id}
-                                    href={`/lois/${texte.id}`}
-                                    className="group border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all bg-card block"
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-primary/10 rounded-lg text-primary flex-shrink-0">
-                                            {NATURE_ICONS[texte.nature] || <FileText className="h-5 w-5" />}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                <span className="text-xs font-medium px-2 py-0.5 bg-muted rounded">
-                                                    {NATURE_LABELS[texte.nature] || texte.nature}
-                                                </span>
-                                                {texte.etat && ETAT_LABELS[texte.etat] && (
-                                                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${ETAT_STYLES[texte.etat] || ETAT_STYLES.VIGUEUR}`}>
-                                                        {ETAT_LABELS[texte.etat]}
-                                                    </span>
-                                                )}
-                                                {texte.sousCategorie && (
-                                                    <span className="text-xs font-medium px-2 py-0.5 bg-muted/60 rounded">
-                                                        {texte.sousCategorie}
-                                                    </span>
-                                                )}
-                                                {texte.datePublication && (
-                                                    <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                                        <Calendar className="h-3 w-3" />
-                                                        {formatDate(texte.datePublication)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <h2 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-2">
-                                                {texte.titre}
-                                            </h2>
-                                            <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                                                {texte.numero && <span>N&deg; {texte.numero}</span>}
-                                                {texte.signataires && (
-                                                    <span className="truncate max-w-xs">{texte.signataires}</span>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
-                                    </div>
-                                </Link>
+                                <TexteCard key={texte.id} texte={texte} />
                             ))
                         )}
                     </div>
@@ -320,52 +251,11 @@ function LoisPageContent() {
 
                 {/* Pagination */}
                 {!isLoading && !isError && totalPages > 1 && (
-                    <div className="flex items-center justify-between pt-6 mt-4 border-t">
-                        <p className="text-sm text-muted-foreground">
-                            Page {filters.page} sur {totalPages}
-                        </p>
-                        <div className="flex gap-1">
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={filters.page <= 1}
-                                onClick={() => goToPage(1)}
-                                title="Premiere page"
-                            >
-                                <ChevronsLeft className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={filters.page <= 1}
-                                onClick={() => goToPage(filters.page - 1)}
-                            >
-                                <ChevronLeft className="h-4 w-4" />
-                                <span className="hidden sm:inline ml-1">Precedent</span>
-                            </Button>
-                            <Button variant="ghost" size="sm" className="bg-primary/10 text-primary">
-                                {filters.page}
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={filters.page >= totalPages}
-                                onClick={() => goToPage(filters.page + 1)}
-                            >
-                                <span className="hidden sm:inline mr-1">Suivant</span>
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                disabled={filters.page >= totalPages}
-                                onClick={() => goToPage(totalPages)}
-                                title="Derniere page"
-                            >
-                                <ChevronsRight className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
+                    <Pagination
+                        currentPage={filters.page}
+                        totalPages={totalPages}
+                        onPageChange={goToPage}
+                    />
                 )}
             </main>
             <Footer />

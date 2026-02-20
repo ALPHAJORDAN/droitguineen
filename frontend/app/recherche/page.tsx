@@ -4,11 +4,13 @@ import { Header } from "@/components/ui/Header";
 import { Footer } from "@/components/ui/Footer";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Button } from "@/components/ui/Button";
+import { TexteCard } from "@/components/TexteCard";
+import { Pagination } from "@/components/Pagination";
+import { LoadingState, ErrorAlert, EmptyState } from "@/components/ui/StateDisplay";
+import { getNatureIcon } from "@/lib/constants";
 import Link from "next/link";
 import {
-    FileText, Filter, Loader2, AlertCircle, Calendar, ArrowRight,
-    Scale, BookOpen, Gavel, FileCheck, ScrollText, X,
-    ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
+    FileText, Filter, Calendar, ArrowRight, X,
     ArrowUpDown, SlidersHorizontal,
 } from "lucide-react";
 import { Suspense, useState } from "react";
@@ -32,22 +34,6 @@ const TYPE_TO_NATURE: Record<string, string> = {
     "Traites": "TRAITE",
     "Codes": "CODE",
     "Jurisprudence": "JURISPRUDENCE",
-};
-
-const NATURE_ICONS: Record<string, React.ReactNode> = {
-    LOI: <Scale className="h-5 w-5" />,
-    LOI_ORGANIQUE: <Scale className="h-5 w-5" />,
-    LOI_CONSTITUTIONNELLE: <BookOpen className="h-5 w-5" />,
-    ORDONNANCE: <Gavel className="h-5 w-5" />,
-    DECRET: <FileCheck className="h-5 w-5" />,
-    DECRET_LOI: <FileCheck className="h-5 w-5" />,
-    ARRETE: <FileText className="h-5 w-5" />,
-    CIRCULAIRE: <FileText className="h-5 w-5" />,
-    DECISION: <FileText className="h-5 w-5" />,
-    CONVENTION: <ScrollText className="h-5 w-5" />,
-    TRAITE: <ScrollText className="h-5 w-5" />,
-    CODE: <BookOpen className="h-5 w-5" />,
-    JURISPRUDENCE: <Gavel className="h-5 w-5" />,
 };
 
 // Filter categories for the sidebar
@@ -87,56 +73,6 @@ function useSearchFilters() {
     };
 }
 
-function TexteCard({ texte }: { texte: Texte }) {
-    return (
-        <Link
-            href={`/lois/${texte.id}`}
-            className="group border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all bg-card block"
-        >
-            <div className="flex items-start gap-4">
-                <div className="p-3 bg-primary/10 rounded-lg text-primary flex-shrink-0">
-                    {NATURE_ICONS[texte.nature] || <FileText className="h-5 w-5" />}
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                        <span className="text-xs font-medium px-2 py-0.5 bg-muted rounded">
-                            {NATURE_LABELS[texte.nature] || texte.nature}
-                        </span>
-                        {texte.etat && ETAT_LABELS[texte.etat] && (
-                            <span className={`text-xs font-medium px-2 py-0.5 rounded ${ETAT_STYLES[texte.etat] || ETAT_STYLES.VIGUEUR}`}>
-                                {ETAT_LABELS[texte.etat]}
-                            </span>
-                        )}
-                        {texte.sousCategorie && (
-                            <span className="text-xs font-medium px-2 py-0.5 bg-muted/60 rounded">
-                                {texte.sousCategorie}
-                            </span>
-                        )}
-                        {texte.datePublication && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                                <Calendar className="h-3 w-3" />
-                                {formatDate(texte.datePublication)}
-                            </span>
-                        )}
-                    </div>
-                    <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-2">
-                        {texte.titre}
-                    </h3>
-                    <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground">
-                        {texte.numero && (
-                            <span>N&deg; {texte.numero}</span>
-                        )}
-                        {texte.signataires && (
-                            <span className="truncate max-w-xs">{texte.signataires}</span>
-                        )}
-                    </div>
-                </div>
-                <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 mt-1" />
-            </div>
-        </Link>
-    );
-}
-
 /** Strip all HTML tags except <mark> to prevent XSS from Meilisearch content */
 function sanitizeHighlight(html: string): string {
     return html.replace(/<\/?(?!mark\b)[^>]+>/gi, '');
@@ -152,7 +88,7 @@ function ArticleCard({ article }: { article: ArticleHit }) {
     return (
         <Link
             href={`/lois/${article.texteId}?article=${article.numero}`}
-            className="group border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all bg-card block border-l-4 border-l-blue-400 dark:border-l-blue-500"
+            className="group border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all duration-200 bg-card block border-l-4 border-l-blue-400 dark:border-l-blue-500"
         >
             <div className="flex items-start gap-4">
                 <div className="p-3 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400 flex-shrink-0">
@@ -195,6 +131,8 @@ function ArticleCard({ article }: { article: ArticleHit }) {
 
 function SearchResultsWithPagination() {
     const filters = useSearchFilters();
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const nature = filters.type ? TYPE_TO_NATURE[filters.type] : undefined;
 
     const searchQuery = useSearch(filters.query, {
@@ -231,53 +169,34 @@ function SearchResultsWithPagination() {
         ? searchQuery.data?.pagination
         : listQuery.data?.pagination;
 
+    const goToPage = (page: number) => {
+        const params = new URLSearchParams(searchParams.toString());
+        params.set("page", page.toString());
+        router.push(`/recherche?${params.toString()}`);
+    };
+
     if (isLoading) {
-        return (
-            <div className="space-y-4">
-                {[...Array(5)].map((_, i) => (
-                    <div key={i} className="border rounded-lg p-5 animate-pulse">
-                        <div className="flex items-start gap-4">
-                            <div className="w-11 h-11 bg-muted rounded-lg flex-shrink-0" />
-                            <div className="flex-1 space-y-2">
-                                <div className="flex gap-2">
-                                    <div className="h-5 w-16 bg-muted rounded" />
-                                    <div className="h-5 w-20 bg-muted rounded" />
-                                </div>
-                                <div className="h-5 w-3/4 bg-muted rounded" />
-                                <div className="h-4 w-1/3 bg-muted rounded" />
-                            </div>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
+        return <LoadingState variant="skeleton" skeletonCount={5} />;
     }
 
     if (isError) {
         return (
-            <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 flex items-center gap-3">
-                <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
-                <div>
-                    <p className="font-medium text-destructive">Erreur lors de la recherche</p>
-                    <p className="text-sm text-muted-foreground">
-                        {error instanceof Error ? error.message : "Veuillez reessayer plus tard."}
-                    </p>
-                </div>
-            </div>
+            <ErrorAlert
+                title="Erreur lors de la recherche"
+                message={error instanceof Error ? error.message : "Veuillez reessayer plus tard."}
+            />
         );
     }
 
     if (searchHits.length === 0) {
         return (
-            <div className="text-center py-12">
-                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-lg font-medium">Aucun resultat trouve</p>
-                <p className="text-muted-foreground mt-1">
-                    {filters.query
-                        ? `Aucun texte ne correspond a "${filters.query}"`
-                        : "Aucun texte disponible pour ces criteres."}
-                </p>
-            </div>
+            <EmptyState
+                icon={<FileText className="h-12 w-12 opacity-50" />}
+                title="Aucun resultat trouve"
+                description={filters.query
+                    ? `Aucun texte ne correspond a "${filters.query}"`
+                    : "Aucun texte disponible pour ces criteres."}
+            />
         );
     }
 
@@ -309,77 +228,12 @@ function SearchResultsWithPagination() {
                     )
                 )}
             </div>
-            <Pagination pagination={pagination} />
+            <Pagination
+                currentPage={pagination?.page || 1}
+                totalPages={pagination?.totalPages || 1}
+                onPageChange={goToPage}
+            />
         </>
-    );
-}
-
-function Pagination({ pagination }: { pagination?: { page: number; totalPages: number } }) {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-
-    const totalPages = pagination?.totalPages || 1;
-    const currentPage = pagination?.page || 1;
-
-    if (totalPages <= 1) return null;
-
-    const goToPage = (page: number) => {
-        const params = new URLSearchParams(searchParams.toString());
-        params.set("page", page.toString());
-        router.push(`/recherche?${params.toString()}`);
-    };
-
-    return (
-        <div className="flex items-center justify-between pt-6">
-            <p className="text-sm text-muted-foreground">
-                Page {currentPage} sur {totalPages}
-            </p>
-            <div className="flex gap-1">
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={currentPage <= 1}
-                    onClick={() => goToPage(1)}
-                    title="Premiere page"
-                >
-                    <ChevronsLeft className="h-4 w-4" />
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={currentPage <= 1}
-                    onClick={() => goToPage(currentPage - 1)}
-                >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline ml-1">Precedent</span>
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    className="bg-primary/10 text-primary"
-                >
-                    {currentPage}
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={currentPage >= totalPages}
-                    onClick={() => goToPage(currentPage + 1)}
-                >
-                    <span className="hidden sm:inline mr-1">Suivant</span>
-                    <ChevronRight className="h-4 w-4" />
-                </Button>
-                <Button
-                    variant="ghost"
-                    size="sm"
-                    disabled={currentPage >= totalPages}
-                    onClick={() => goToPage(totalPages)}
-                    title="Derniere page"
-                >
-                    <ChevronsRight className="h-4 w-4" />
-                </Button>
-            </div>
-        </div>
     );
 }
 
@@ -674,9 +528,7 @@ export default function SearchPage() {
 
                         <Suspense
                             fallback={
-                                <div className="flex items-center justify-center py-12">
-                                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                </div>
+                                <LoadingState variant="skeleton" skeletonCount={5} />
                             }
                         >
                             <SearchResultsWithPagination />

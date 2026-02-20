@@ -82,7 +82,7 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
         setQuery(value);
         setSelectedIndex(-1);
@@ -100,18 +100,18 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
             setShowSuggestions(false);
             setDebouncedQuery("");
         }
-    };
+    }, []);
 
-    const navigateToHit = (hit: SearchHit) => {
+    const navigateToHit = React.useCallback((hit: SearchHit) => {
         setShowSuggestions(false);
         if (hit.type === "article") {
             router.push(`/lois/${hit.texteId}?article=${hit.numero}`);
         } else {
             router.push(`/lois/${hit.id}`);
         }
-    };
+    }, [router]);
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
+    const handleKeyDown = React.useCallback((e: React.KeyboardEvent) => {
         if (e.key === "Escape") {
             setShowSuggestions(false);
             setSelectedIndex(-1);
@@ -129,9 +129,9 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
             e.preventDefault();
             navigateToHit(suggestions[selectedIndex]);
         }
-    };
+    }, [showSuggestions, suggestions, selectedIndex, navigateToHit]);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = React.useCallback((e: React.FormEvent) => {
         e.preventDefault();
         setShowSuggestions(false);
         if (query.trim()) {
@@ -141,11 +141,11 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                 router.push(`/recherche?q=${encodeURIComponent(query)}`);
             }
         }
-    };
+    }, [query, onSearch, router]);
 
-    const handleFilterClick = (href: string) => {
+    const handleFilterClick = React.useCallback((href: string) => {
         router.push(href);
-    };
+    }, [router]);
 
     return (
         <div ref={containerRef} className={cn("w-full space-y-6", className)} {...props}>

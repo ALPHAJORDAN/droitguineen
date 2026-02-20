@@ -4,29 +4,18 @@ import { Header } from "@/components/ui/Header";
 import { Footer } from "@/components/ui/Footer";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Button } from "@/components/ui/Button";
+import { TexteCard } from "@/components/TexteCard";
+import { LoadingState, EmptyState } from "@/components/ui/StateDisplay";
+import { getNatureIcon } from "@/lib/constants";
 import { useStats } from "@/lib/hooks";
-import { NATURE_LABELS, ETAT_LABELS, Texte } from "@/lib/api";
-import { formatDate, ETAT_STYLES } from "@/lib/utils";
+import { NATURE_LABELS, Texte } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import Link from "next/link";
 import {
     BookOpen, Scale, FileText, ArrowRight, Gavel, FileCheck, ScrollText,
-    Calendar, Loader2, Database, Search, Download, Compass, BookMarked,
+    Loader2, Database, Search, Download, Compass, BookMarked,
     CheckCircle, FolderOpen, Shield,
 } from "lucide-react";
-
-const NATURE_ICONS: Record<string, React.ReactNode> = {
-    LOI: <Scale className="h-5 w-5" />,
-    LOI_ORGANIQUE: <Scale className="h-5 w-5" />,
-    LOI_CONSTITUTIONNELLE: <BookOpen className="h-5 w-5" />,
-    ORDONNANCE: <Gavel className="h-5 w-5" />,
-    DECRET: <FileCheck className="h-5 w-5" />,
-    CODE: <BookOpen className="h-5 w-5" />,
-    ARRETE: <FileText className="h-5 w-5" />,
-    JURISPRUDENCE: <Gavel className="h-5 w-5" />,
-    TRAITE: <ScrollText className="h-5 w-5" />,
-    CONVENTION: <ScrollText className="h-5 w-5" />,
-};
 
 const CATEGORIES = [
     { nature: "LOI_CONSTITUTIONNELLE", type: "Constitution", label: "Constitution", description: "Loi fondamentale", icon: <BookOpen className="h-7 w-7" /> },
@@ -200,71 +189,23 @@ function HomeContent() {
                             </Link>
                         </div>
 
-                        {statsLoading && (
-                            <div className="flex items-center justify-center py-12">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                <span className="ml-2 text-muted-foreground">Chargement...</span>
-                            </div>
-                        )}
+                        {statsLoading && <LoadingState message="Chargement..." />}
 
                         {!statsLoading && !stats && (
-                            <div className="text-center py-12 text-muted-foreground">
-                                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                <p>Impossible de charger les textes recents.</p>
-                                <p className="text-sm mt-1">Verifiez que le serveur backend est demarre.</p>
-                            </div>
+                            <EmptyState
+                                title="Impossible de charger les textes recents."
+                                description="Verifiez que le serveur backend est demarre."
+                            />
                         )}
 
                         {!statsLoading && stats && (
                             <>
                                 {recentTextes.length === 0 ? (
-                                    <div className="text-center py-12 text-muted-foreground">
-                                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                        <p>Aucun texte disponible pour le moment.</p>
-                                    </div>
+                                    <EmptyState title="Aucun texte disponible pour le moment." />
                                 ) : (
                                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                                         {recentTextes.map((texte: Texte) => (
-                                            <Link
-                                                key={texte.id}
-                                                href={`/lois/${texte.id}`}
-                                                className="group border rounded-lg p-5 hover:border-primary hover:shadow-md transition-all bg-card block"
-                                            >
-                                                <div className="flex items-start gap-4">
-                                                    <div className="p-3 bg-primary/10 rounded-lg text-primary flex-shrink-0">
-                                                        {NATURE_ICONS[texte.nature] || <FileText className="h-5 w-5" />}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                                            <span className="text-xs font-medium px-2 py-0.5 bg-muted rounded">
-                                                                {NATURE_LABELS[texte.nature] || texte.nature}
-                                                            </span>
-                                                            {texte.etat && ETAT_LABELS[texte.etat] && (
-                                                                <span className={`text-xs font-medium px-2 py-0.5 rounded ${ETAT_STYLES[texte.etat] || ETAT_STYLES.VIGUEUR}`}>
-                                                                    {ETAT_LABELS[texte.etat]}
-                                                                </span>
-                                                            )}
-                                                            {texte.sousCategorie && (
-                                                                <span className="text-xs font-medium px-2 py-0.5 bg-muted/60 rounded">
-                                                                    {texte.sousCategorie}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <h3 className="text-base font-semibold group-hover:text-primary transition-colors line-clamp-2">
-                                                            {texte.titre}
-                                                        </h3>
-                                                        <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                                                            {texte.numero && <span>N&deg; {texte.numero}</span>}
-                                                            {texte.datePublication && (
-                                                                <span className="flex items-center gap-1">
-                                                                    <Calendar className="h-3 w-3" />
-                                                                    {formatDate(texte.datePublication)}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </Link>
+                                            <TexteCard key={texte.id} texte={texte} compact />
                                         ))}
                                     </div>
                                 )}

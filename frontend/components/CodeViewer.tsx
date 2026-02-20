@@ -2,7 +2,7 @@
 
 import { Article } from "@/lib/api";
 import { ChevronRight, ChevronDown, ChevronUp, Link2 } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, memo } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn, ETAT_STYLES } from "@/lib/utils";
 
@@ -244,7 +244,30 @@ function romanToInt(s: string): number {
     return result;
 }
 
-function SectionBlock({
+const HEADER_STYLES = [
+    "text-xl font-bold text-primary", // LIVRE
+    "text-lg font-semibold text-primary/90", // TITRE
+    "text-base font-semibold text-foreground", // CHAPITRE
+    "text-sm font-medium text-muted-foreground italic", // SECTION
+    "text-sm text-muted-foreground", // PARAGRAPHE
+    "text-sm text-muted-foreground", // Autres
+];
+
+const SIZE_MAP: Record<string, Record<string, string>> = {
+    md: { 'text-sm': 'text-base', 'text-base': 'text-lg', 'text-lg': 'text-xl', 'text-xl': 'text-2xl' },
+    lg: { 'text-sm': 'text-lg', 'text-base': 'text-xl', 'text-lg': 'text-2xl', 'text-xl': 'text-3xl' },
+};
+
+const INDENT_STYLES = [
+    "ml-0", // LIVRE
+    "ml-2", // TITRE
+    "ml-4", // CHAPITRE
+    "ml-6", // SECTION
+    "ml-8", // PARAGRAPHE
+    "ml-8", // Autres
+];
+
+const SectionBlock = memo(function SectionBlock({
     section,
     level,
     fontSize,
@@ -261,37 +284,14 @@ function SectionBlock({
 }) {
     const hasArticles = section.articles.length > 0;
 
-    const headerStyles = [
-        "text-xl font-bold text-primary", // LIVRE
-        "text-lg font-semibold text-primary/90", // TITRE
-        "text-base font-semibold text-foreground", // CHAPITRE
-        "text-sm font-medium text-muted-foreground italic", // SECTION
-        "text-sm text-muted-foreground", // PARAGRAPHE
-        "text-sm text-muted-foreground", // Autres
-    ];
-
-    // Adjust header sizes based on font size preference
-    const sizeMap: Record<string, Record<string, string>> = {
-        md: { 'text-sm': 'text-base', 'text-base': 'text-lg', 'text-lg': 'text-xl', 'text-xl': 'text-2xl' },
-        lg: { 'text-sm': 'text-lg', 'text-base': 'text-xl', 'text-lg': 'text-2xl', 'text-xl': 'text-3xl' },
-    };
-    const adjustedHeaderStyles = headerStyles.map(style => {
-        const map = sizeMap[fontSize];
+    const adjustedHeaderStyles = HEADER_STYLES.map(style => {
+        const map = SIZE_MAP[fontSize];
         if (!map) return style;
         return style.replace(/text-(sm|base|lg|xl)/g, (match) => map[match] || match);
     });
 
-    const indentStyles = [
-        "ml-0", // LIVRE
-        "ml-2", // TITRE
-        "ml-4", // CHAPITRE
-        "ml-6", // SECTION
-        "ml-8", // PARAGRAPHE
-        "ml-8", // Autres
-    ];
-
     return (
-        <div className={cn("w-full", indentStyles[Math.min(level, 5)])}>
+        <div className={cn("w-full", INDENT_STYLES[Math.min(level, 5)])}>
             <button
                 onClick={onToggle}
                 className={cn(
@@ -337,7 +337,7 @@ function SectionBlock({
             </div>
         </div>
     );
-}
+});
 
 function HighlightText({ text, query }: { text: string; query: string }) {
     if (!query.trim()) return <>{text || '\u00A0'}</>;
@@ -357,7 +357,7 @@ function HighlightText({ text, query }: { text: string; query: string }) {
     );
 }
 
-function ArticleBlock({ article, fontSize, searchQuery = '' }: { article: Article; fontSize: 'sm' | 'md' | 'lg'; searchQuery?: string }) {
+const ArticleBlock = memo(function ArticleBlock({ article, fontSize, searchQuery = '' }: { article: Article; fontSize: 'sm' | 'md' | 'lg'; searchQuery?: string }) {
     const [isExpanded, setIsExpanded] = useState(false);
     const isLongContent = article.contenu.length > 500;
 
@@ -475,4 +475,4 @@ function ArticleBlock({ article, fontSize, searchQuery = '' }: { article: Articl
             )}
         </div>
     );
-}
+});
