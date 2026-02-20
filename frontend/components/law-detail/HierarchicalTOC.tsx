@@ -34,7 +34,7 @@ export function HierarchicalTOC({ sections, articles = [], activeArticle }: Hier
                     <div className="p-4 border-b bg-muted/30">
                         <h2 className="font-semibold text-sm flex items-center">
                             <FileText className="mr-2 h-4 w-4 text-primary" />
-                            Table des matieres
+                            Table des matières
                         </h2>
                     </div>
                     <nav className="p-3 overflow-y-auto flex-1">
@@ -53,20 +53,20 @@ export function HierarchicalTOC({ sections, articles = [], activeArticle }: Hier
                     <SheetTrigger asChild>
                         <button
                             className="lg:hidden fixed bottom-6 right-6 z-40 bg-primary text-primary-foreground rounded-full p-3 shadow-lg hover:opacity-90 transition-opacity"
-                            aria-label="Table des matieres"
+                            aria-label="Table des matières"
                         >
                             <List className="h-5 w-5" />
                         </button>
                     </SheetTrigger>
                     <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh] flex flex-col p-0 lg:hidden">
                         <VisuallyHidden>
-                            <SheetTitle>Table des matieres</SheetTitle>
+                            <SheetTitle>Table des matières</SheetTitle>
                             <SheetDescription>Navigation dans le document</SheetDescription>
                         </VisuallyHidden>
                         <div className="p-4 border-b flex items-center flex-shrink-0">
                             <h2 className="font-semibold text-sm flex items-center">
                                 <FileText className="mr-2 h-4 w-4 text-primary" />
-                                Table des matieres
+                                Table des matières
                             </h2>
                         </div>
                         <nav className="p-3 overflow-y-auto flex-1">

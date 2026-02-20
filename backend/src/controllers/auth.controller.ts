@@ -54,8 +54,8 @@ class AuthController {
   });
 
   getAllUsers = asyncHandler(async (req: Request, res: Response) => {
-    const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string) || 20), 100);
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string, 10) || 20), 100);
     const result = await authService.getAllUsers(page, limit);
 
     res.json({

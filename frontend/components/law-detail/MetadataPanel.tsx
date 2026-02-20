@@ -11,13 +11,16 @@ import { useState } from "react";
 function CopyableValue({ label, value }: { label: string; value: string }) {
     const [copied, setCopied] = useState(false);
 
+    const [failed, setFailed] = useState(false);
+
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(value);
             setCopied(true);
             setTimeout(() => setCopied(false), 2500);
         } catch {
-            // Clipboard API not available (e.g. insecure context)
+            setFailed(true);
+            setTimeout(() => setFailed(false), 2500);
         }
     };
 
@@ -29,7 +32,7 @@ function CopyableValue({ label, value }: { label: string; value: string }) {
         >
             <span className="text-xs text-muted-foreground block">{label}</span>
             <span className="text-sm font-mono group-hover:text-primary transition-colors">
-                {copied ? "Copie !" : value}
+                {copied ? "Copié !" : failed ? "Échec" : value}
             </span>
         </button>
     );

@@ -352,7 +352,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                         Exporter
                                     </Button>
                                     {showExportMenu && (
-                                        <div className="absolute top-full left-0 mt-1 w-44 bg-card border rounded-lg shadow-lg z-50 py-1 animate-in fade-in zoom-in-95 duration-150">
+                                        <div role="menu" className="absolute top-full left-0 mt-1 w-44 bg-card border rounded-lg shadow-lg z-50 py-1 animate-in fade-in zoom-in-95 duration-150">
                                             {[
                                                 { format: "pdf" as const, label: "PDF", icon: <FileText className="h-4 w-4" /> },
                                                 { format: "docx" as const, label: "Word (DOCX)", icon: <FileText className="h-4 w-4" /> },
@@ -363,6 +363,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                                     key={format}
                                                     className="w-full text-left px-3 py-2 hover:bg-muted text-sm flex items-center gap-2 transition-colors"
                                                     onClick={() => handleExport(format)}
+                                                    role="menuitem"
                                                     aria-label={`Exporter en ${label}`}
                                                 >
                                                     {icon} {label}

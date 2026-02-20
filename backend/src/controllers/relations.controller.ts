@@ -90,7 +90,7 @@ class RelationsController {
   getRelationGraph = asyncHandler(async (req: Request, res: Response) => {
     const { texteId } = req.params;
     const { depth = '2' } = req.query;
-    const maxDepth = Math.min(parseInt(depth as string, 10), 5);
+    const maxDepth = Math.max(1, Math.min(parseInt(depth as string, 10) || 2, 5));
 
     const result = await relationService.buildRelationGraph(texteId, maxDepth);
 

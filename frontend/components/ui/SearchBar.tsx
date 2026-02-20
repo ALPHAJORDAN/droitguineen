@@ -120,15 +120,21 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
         }
         if (!showSuggestions || suggestions.length === 0) return;
 
+        const maxIndex = suggestions.length; // last index = "see all results" button
         if (e.key === "ArrowDown") {
             e.preventDefault();
-            setSelectedIndex(prev => Math.min(prev + 1, suggestions.length - 1));
+            setSelectedIndex(prev => Math.min(prev + 1, maxIndex));
         } else if (e.key === "ArrowUp") {
             e.preventDefault();
             setSelectedIndex(prev => Math.max(prev - 1, -1));
         } else if (e.key === "Enter" && selectedIndex >= 0) {
             e.preventDefault();
-            navigateToHit(suggestions[selectedIndex]);
+            if (selectedIndex < suggestions.length) {
+                navigateToHit(suggestions[selectedIndex]);
+            } else {
+                setShowSuggestions(false);
+                router.push(`/recherche?q=${encodeURIComponent(debouncedQuery)}`);
+            }
         }
     }, [showSuggestions, suggestions, selectedIndex, navigateToHit]);
 
@@ -292,13 +298,17 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                                             setShowSuggestions(false);
                                             router.push(`/recherche?q=${encodeURIComponent(debouncedQuery)}`);
                                         }}
-                                        className="w-full text-center px-4 py-2.5 text-sm text-primary font-medium hover:bg-accent/30 transition-colors border-t border-border/50"
+                                        onMouseEnter={() => setSelectedIndex(suggestions.length)}
+                                        className={cn(
+                                            "w-full text-center px-4 py-2.5 text-sm text-primary font-medium hover:bg-accent/30 transition-colors border-t border-border/50",
+                                            selectedIndex === suggestions.length && "bg-accent/30"
+                                        )}
                                     >
-                                        Voir tous les resultats pour &laquo; {debouncedQuery} &raquo;
+                                        Voir tous les résultats pour &laquo; {debouncedQuery} &raquo;
                                     </button>
                                     <div className="hidden sm:flex items-center justify-center gap-3 px-4 py-1.5 text-[10px] text-muted-foreground/50 border-t border-border/30">
                                         <span><kbd className="px-1 py-0.5 rounded border border-border/50 font-mono">↑↓</kbd> naviguer</span>
-                                        <span><kbd className="px-1 py-0.5 rounded border border-border/50 font-mono">Entree</kbd> valider</span>
+                                        <span><kbd className="px-1 py-0.5 rounded border border-border/50 font-mono">Entrée</kbd> valider</span>
                                         <span><kbd className="px-1 py-0.5 rounded border border-border/50 font-mono">Esc</kbd> fermer</span>
                                     </div>
                                 </>
