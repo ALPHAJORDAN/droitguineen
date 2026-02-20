@@ -251,9 +251,7 @@ export async function fetchLois(options?: {
     if (options?.dateDebut) params.set('dateDebut', options.dateDebut);
     if (options?.dateFin) params.set('dateFin', options.dateFin);
 
-    const res = await fetch(`${API_BASE_URL}/lois?${params.toString()}`, {
-        cache: 'no-store',
-    });
+    const res = await fetch(`${API_BASE_URL}/lois?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch lois');
     const response = await res.json();
     return {
@@ -263,13 +261,25 @@ export async function fetchLois(options?: {
 }
 
 export async function getLoi(id: string): Promise<Texte> {
-    const res = await fetch(`${API_BASE_URL}/lois/${id}`, {
-        cache: 'no-store',
-    });
+    const res = await fetch(`${API_BASE_URL}/lois/${id}`);
     if (!res.ok) throw new Error('Failed to fetch loi');
     const response = await res.json();
     return response.data;
 }
+export interface StatsResponse {
+    total: number;
+    enVigueur: number;
+    natureCounts: Record<string, number>;
+    recent: Texte[];
+}
+
+export async function fetchStats(): Promise<StatsResponse> {
+    const res = await fetch(`${API_BASE_URL}/lois/stats`);
+    if (!res.ok) throw new Error('Failed to fetch stats');
+    const response = await res.json();
+    return response.data;
+}
+
 export async function searchTextes(query: string, options?: {
     nature?: string;
     etat?: string;
@@ -696,9 +706,7 @@ export interface RelationGraph {
 // ============ Relations API (read=public, write=protected) ============
 
 export async function getRelations(texteId: string): Promise<RelationsResponse> {
-    const res = await fetch(`${API_BASE_URL}/relations/${texteId}`, {
-        cache: 'no-store',
-    });
+    const res = await fetch(`${API_BASE_URL}/relations/${texteId}`);
     if (!res.ok) throw new Error('Failed to fetch relations');
     return res.json();
 }
@@ -752,9 +760,7 @@ export async function getRelationGraph(texteId: string, depth?: number): Promise
     const params = new URLSearchParams();
     if (depth) params.set('depth', depth.toString());
 
-    const res = await fetch(`${API_BASE_URL}/relations/graph/${texteId}?${params.toString()}`, {
-        cache: 'no-store',
-    });
+    const res = await fetch(`${API_BASE_URL}/relations/graph/${texteId}?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch relation graph');
     return res.json();
 }

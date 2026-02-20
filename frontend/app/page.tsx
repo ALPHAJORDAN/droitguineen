@@ -4,11 +4,10 @@ import { Header } from "@/components/ui/Header";
 import { Footer } from "@/components/ui/Footer";
 import { SearchBar } from "@/components/ui/SearchBar";
 import { Button } from "@/components/ui/Button";
-import { useLois, queryKeys } from "@/lib/hooks";
-import { fetchLois, NATURE_LABELS, ETAT_LABELS, Texte } from "@/lib/api";
+import { useStats } from "@/lib/hooks";
+import { NATURE_LABELS, ETAT_LABELS, Texte } from "@/lib/api";
 import { formatDate, ETAT_STYLES } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
-import { useQueries } from "@tanstack/react-query";
 import Link from "next/link";
 import {
     BookOpen, Scale, FileText, ArrowRight, Gavel, FileCheck, ScrollText,
@@ -42,8 +41,6 @@ const CATEGORIES = [
     { nature: "CONVENTION", type: "Conventions", label: "Conventions", description: "Conventions internationales", icon: <ScrollText className="h-7 w-7" /> },
 ];
 
-const NATURES_FOR_STATS = CATEGORIES.map(c => c.nature);
-
 const FEATURES = [
     {
         icon: <Search className="h-6 w-6" />,
@@ -71,31 +68,17 @@ function HomeContent() {
     const { user, isAuthenticated } = useAuth();
     const isAdmin = user?.role === "ADMIN" || user?.role === "EDITOR";
 
-    // Optimized: single useQueries for all nature counts
-    const natureCounts = useQueries({
-        queries: NATURES_FOR_STATS.map(nature => ({
-            queryKey: queryKeys.lois.list({ nature, limit: 1 }),
-            queryFn: () => fetchLois({ nature, limit: 1 }),
-        })),
-    });
+    // Single API call for all homepage stats (was 13 separate requests)
+    const { data: stats, isLoading: statsLoading } = useStats();
 
-    // Total count and in-force count
-    const allTextes = useLois({ limit: 1 });
-    const enVigueur = useLois({ limit: 1, etat: "VIGUEUR" });
-
-    // Recent texts
-    const recent = useLois({ limit: 6 });
-    const recentTextes = recent.data?.data || [];
-
-    const statsLoading = allTextes.isLoading || natureCounts.some(q => q.isLoading);
-    const totalCount = allTextes.data?.pagination.total ?? 0;
-    const enVigueurCount = enVigueur.data?.pagination.total ?? 0;
-    const activeCategories = natureCounts.filter(q => (q.data?.pagination.total ?? 0) > 0).length;
+    const totalCount = stats?.total ?? 0;
+    const enVigueurCount = stats?.enVigueur ?? 0;
+    const recentTextes = stats?.recent ?? [];
+    const activeCategories = stats ? Object.values(stats.natureCounts).filter(c => c > 0).length : 0;
 
     const getCountForNature = (nature: string): number | null => {
-        const idx = NATURES_FOR_STATS.indexOf(nature);
-        if (idx === -1) return null;
-        return natureCounts[idx]?.data?.pagination.total ?? null;
+        if (!stats) return null;
+        return stats.natureCounts[nature] ?? 0;
     };
 
     return (
@@ -139,7 +122,7 @@ function HomeContent() {
                                     <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
                                 </div>
                                 <p className="text-2xl md:text-3xl font-bold">
-                                    {enVigueur.isLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : enVigueurCount}
+                                    {statsLoading ? <Loader2 className="h-6 w-6 animate-spin mx-auto" /> : enVigueurCount}
                                 </p>
                                 <p className="text-sm text-muted-foreground mt-1">En vigueur</p>
                             </div>
@@ -217,14 +200,14 @@ function HomeContent() {
                             </Link>
                         </div>
 
-                        {recent.isLoading && (
+                        {statsLoading && (
                             <div className="flex items-center justify-center py-12">
                                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                                 <span className="ml-2 text-muted-foreground">Chargement...</span>
                             </div>
                         )}
 
-                        {recent.isError && (
+                        {!statsLoading && !stats && (
                             <div className="text-center py-12 text-muted-foreground">
                                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                                 <p>Impossible de charger les textes recents.</p>
@@ -232,7 +215,7 @@ function HomeContent() {
                             </div>
                         )}
 
-                        {!recent.isLoading && !recent.isError && (
+                        {!statsLoading && stats && (
                             <>
                                 {recentTextes.length === 0 ? (
                                     <div className="text-center py-12 text-muted-foreground">

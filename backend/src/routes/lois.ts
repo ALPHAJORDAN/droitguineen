@@ -1,10 +1,18 @@
-import { Router } from 'express';
+import { Router, Request, Response } from 'express';
 import { loisController } from '../controllers/lois.controller';
 import { validate, validateId } from '../middlewares/validation.middleware';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { createLoiSchema, updateLoiSchema, paginationSchema } from '../validators/loi.validator';
+import { asyncHandler } from '../middlewares/error.middleware';
+import { texteRepository } from '../repositories/texte.repository';
 
 const router = Router();
+
+// GET /lois/stats - Statistiques agrégées (public, 1 requête au lieu de 13)
+router.get('/stats', asyncHandler(async (req: Request, res: Response) => {
+    const stats = await texteRepository.getStats();
+    res.json({ success: true, data: stats });
+}));
 
 // GET /lois - Liste paginée des textes (public)
 router.get('/', validate(paginationSchema, 'query'), loisController.getAll);

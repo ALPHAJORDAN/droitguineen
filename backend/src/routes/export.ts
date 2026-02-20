@@ -9,6 +9,29 @@ import { asyncHandler, AppError } from '../middlewares/error.middleware';
 
 const router = Router();
 
+/** In-memory cache for export data (TTL: 5 minutes) */
+const exportCache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000;
+
+async function loadTexteForExport(id: string, include: object) {
+    const cached = exportCache.get(id);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+        return cached.data;
+    }
+
+    const texte = await prisma.texte.findUnique({ where: { id }, include });
+    if (texte) {
+        exportCache.set(id, { data: texte, timestamp: Date.now() });
+        // Evict old entries if cache grows too large
+        if (exportCache.size > 50) {
+            const oldest = [...exportCache.entries()]
+                .sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
+            if (oldest) exportCache.delete(oldest[0]);
+        }
+    }
+    return texte;
+}
+
 /** Helper: escape HTML special characters to prevent XSS */
 function escapeHtml(str: string): string {
     return str
@@ -77,15 +100,12 @@ router.get('/pdf/:id', asyncHandler(async (req: Request, res: Response) => {
         watermark: watermark as string | undefined
     };
 
-    const texte = await prisma.texte.findUnique({
-        where: { id },
-        include: {
-            articles: {
-                orderBy: { ordre: 'asc' },
-                where: { sectionId: null }
-            },
-            sections: sectionsInclude
-        }
+    const texte = await loadTexteForExport(id, {
+        articles: {
+            orderBy: { ordre: 'asc' },
+            where: { sectionId: null }
+        },
+        sections: sectionsInclude
     });
 
     if (!texte) {
@@ -122,15 +142,12 @@ router.get('/docx/:id', asyncHandler(async (req: Request, res: Response) => {
         includePageNumbers: includePageNumbers === 'true'
     };
 
-    const texte = await prisma.texte.findUnique({
-        where: { id },
-        include: {
-            articles: {
-                orderBy: { ordre: 'asc' },
-                where: { sectionId: null }
-            },
-            sections: sectionsInclude
-        }
+    const texte = await loadTexteForExport(id, {
+        articles: {
+            orderBy: { ordre: 'asc' },
+            where: { sectionId: null }
+        },
+        sections: sectionsInclude
     });
 
     if (!texte) {
@@ -152,35 +169,32 @@ router.get('/docx/:id', asyncHandler(async (req: Request, res: Response) => {
 router.get('/json/:id', asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const texte = await prisma.texte.findUnique({
-        where: { id },
-        include: {
-            articles: {
-                orderBy: { ordre: 'asc' },
-                select: {
-                    id: true,
-                    cid: true,
-                    numero: true,
-                    contenu: true,
-                    etat: true,
-                    dateDebut: true,
-                    dateFin: true,
-                    ordre: true
+    const texte = await loadTexteForExport(`${id}:json`, {
+        articles: {
+            orderBy: { ordre: 'asc' },
+            select: {
+                id: true,
+                cid: true,
+                numero: true,
+                contenu: true,
+                etat: true,
+                dateDebut: true,
+                dateFin: true,
+                ordre: true
+            }
+        },
+        sections: sectionsInclude,
+        relationsSource: {
+            include: {
+                texteCible: {
+                    select: { id: true, titre: true, nature: true, numero: true }
                 }
-            },
-            sections: sectionsInclude,
-            relationsSource: {
-                include: {
-                    texteCible: {
-                        select: { id: true, titre: true, nature: true, numero: true }
-                    }
-                }
-            },
-            relationsCible: {
-                include: {
-                    texteSource: {
-                        select: { id: true, titre: true, nature: true, numero: true }
-                    }
+            }
+        },
+        relationsCible: {
+            include: {
+                texteSource: {
+                    select: { id: true, titre: true, nature: true, numero: true }
                 }
             }
         }
@@ -212,12 +226,12 @@ router.get('/json/:id', asyncHandler(async (req: Request, res: Response) => {
         structure: texte.sections.length > 0 ? texte.sections : undefined,
         articles: texte.articles.length > 0 ? texte.articles : undefined,
         relations: {
-            modifie: texte.relationsSource.filter(r => r.type === 'MODIFIE'),
-            abroge: texte.relationsSource.filter(r => r.type === 'ABROGE'),
-            cite: texte.relationsSource.filter(r => r.type === 'CITE'),
-            modifiePar: texte.relationsCible.filter(r => r.type === 'MODIFIE'),
-            abrogePar: texte.relationsCible.filter(r => r.type === 'ABROGE'),
-            citePar: texte.relationsCible.filter(r => r.type === 'CITE')
+            modifie: texte.relationsSource.filter((r: any) => r.type === 'MODIFIE'),
+            abroge: texte.relationsSource.filter((r: any) => r.type === 'ABROGE'),
+            cite: texte.relationsSource.filter((r: any) => r.type === 'CITE'),
+            modifiePar: texte.relationsCible.filter((r: any) => r.type === 'MODIFIE'),
+            abrogePar: texte.relationsCible.filter((r: any) => r.type === 'ABROGE'),
+            citePar: texte.relationsCible.filter((r: any) => r.type === 'CITE')
         },
         exportedAt: new Date().toISOString(),
         source: 'Droitguinéen'
@@ -236,15 +250,12 @@ router.get('/json/:id', asyncHandler(async (req: Request, res: Response) => {
 router.get('/html/:id', asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const texte = await prisma.texte.findUnique({
-        where: { id },
-        include: {
-            articles: {
-                orderBy: { ordre: 'asc' },
-                where: { sectionId: null }
-            },
-            sections: sectionsInclude
-        }
+    const texte = await loadTexteForExport(id, {
+        articles: {
+            orderBy: { ordre: 'asc' },
+            where: { sectionId: null }
+        },
+        sections: sectionsInclude
     });
 
     if (!texte) {

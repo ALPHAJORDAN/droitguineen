@@ -206,6 +206,8 @@ function SearchResultsWithPagination() {
         limit: 20,
     });
 
+    const isSearching = filters.query.length > 0;
+
     const listQuery = useLois({
         nature,
         etat: filters.etat || undefined,
@@ -215,9 +217,8 @@ function SearchResultsWithPagination() {
         dateFin: filters.dateFin || undefined,
         page: filters.page,
         limit: 20,
+        enabled: !isSearching,
     });
-
-    const isSearching = filters.query.length > 0;
     const query = isSearching ? searchQuery : listQuery;
     const { isLoading, isError, error } = query;
 

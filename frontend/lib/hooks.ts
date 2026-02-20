@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
     fetchLois,
+    fetchStats,
     getLoi,
     searchTextes,
     searchSuggestions,
@@ -24,6 +25,7 @@ import {
     logoutApi,
     clearTokens,
     Texte,
+    StatsResponse,
     PaginatedResponse,
     SearchResponse,
     FileData,
@@ -56,6 +58,7 @@ export const queryKeys = {
         all: ["users"] as const,
         list: (page?: number) => [...queryKeys.users.all, "list", page] as const,
     },
+    stats: ["stats"] as const,
     suggestions: {
         all: ["suggestions"] as const,
         query: (q: string) => ["suggestions", q] as const,
@@ -66,6 +69,16 @@ export const queryKeys = {
         graph: (texteId: string, depth?: number) => [...queryKeys.relations.all, "graph", texteId, depth] as const,
     },
 };
+
+// ============ Hooks pour les Stats ============
+
+export function useStats() {
+    return useQuery<StatsResponse>({
+        queryKey: queryKeys.stats,
+        queryFn: fetchStats,
+        staleTime: 5 * 60 * 1000,
+    });
+}
 
 // ============ Hooks pour les Lois/Textes ============
 
@@ -79,10 +92,14 @@ export function useLois(options?: {
     order?: 'asc' | 'desc';
     dateDebut?: string;
     dateFin?: string;
+    enabled?: boolean;
 }) {
+    const { enabled = true, ...fetchOptions } = options ?? {};
     return useQuery<PaginatedResponse<Texte>>({
-        queryKey: queryKeys.lois.list(options),
-        queryFn: () => fetchLois(options),
+        queryKey: queryKeys.lois.list(fetchOptions),
+        queryFn: () => fetchLois(fetchOptions),
+        staleTime: 5 * 60 * 1000,
+        enabled,
     });
 }
 
@@ -92,6 +109,7 @@ export function useLoi(id: string, initialData?: Texte) {
         queryFn: () => getLoi(id),
         enabled: !!id,
         initialData,
+        staleTime: 10 * 60 * 1000,
     });
 }
 
@@ -112,6 +130,7 @@ export function useSearch(
         queryKey: queryKeys.search.results(query, options),
         queryFn: () => searchTextes(query, options),
         enabled: query.length > 0,
+        staleTime: 2 * 60 * 1000,
     });
 }
 

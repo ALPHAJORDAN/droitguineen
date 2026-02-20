@@ -61,52 +61,51 @@ class RelationService {
    * Get all relations for a texte
    */
   async getRelationsByTexteId(texteId: string) {
-    const texte = await prisma.texte.findUnique({
-      where: { id: texteId },
-      select: { id: true, titre: true },
-    });
+    // Run all 3 queries in parallel instead of sequentially
+    const [texte, relationsSource, relationsCible] = await Promise.all([
+      prisma.texte.findUnique({
+        where: { id: texteId },
+        select: { id: true, titre: true },
+      }),
+      prisma.texteRelation.findMany({
+        where: { texteSourceId: texteId },
+        include: {
+          texteCible: {
+            select: {
+              id: true,
+              cid: true,
+              titre: true,
+              nature: true,
+              numero: true,
+              dateSignature: true,
+              etat: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+      prisma.texteRelation.findMany({
+        where: { texteCibleId: texteId },
+        include: {
+          texteSource: {
+            select: {
+              id: true,
+              cid: true,
+              titre: true,
+              nature: true,
+              numero: true,
+              dateSignature: true,
+              etat: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
 
     if (!texte) {
       throw new AppError(404, 'Texte non trouvé');
     }
-
-    // Get outgoing relations (this texte modifies/abrogates others)
-    const relationsSource = await prisma.texteRelation.findMany({
-      where: { texteSourceId: texteId },
-      include: {
-        texteCible: {
-          select: {
-            id: true,
-            cid: true,
-            titre: true,
-            nature: true,
-            numero: true,
-            dateSignature: true,
-            etat: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    // Get incoming relations (this texte is modified/abrogated by others)
-    const relationsCible = await prisma.texteRelation.findMany({
-      where: { texteCibleId: texteId },
-      include: {
-        texteSource: {
-          select: {
-            id: true,
-            cid: true,
-            titre: true,
-            nature: true,
-            numero: true,
-            dateSignature: true,
-            etat: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
 
     // Group by type
     const grouped = {
@@ -324,7 +323,13 @@ class RelationService {
         /(?:loi|décret|ordonnance|arrêté)\s*(?:n[°o.]?\s*)?([LODA]\/\d{4}\/\d{3}(?:\/[A-Z]+)?)/gi,
     };
 
-    const detectedRelations: DetectedRelation[] = [];
+    // Phase 1: Collect all regex matches without DB queries
+    const rawMatches: Array<{
+      type: string;
+      reference: string;
+      context: string;
+      normalizedRef: string;
+    }> = [];
 
     for (const [type, pattern] of Object.entries(patterns)) {
       let match;
@@ -333,31 +338,46 @@ class RelationService {
         const startContext = Math.max(0, match.index - 100);
         const endContext = Math.min(fullText.length, match.index + match[0].length + 100);
         const context = fullText.substring(startContext, endContext);
-
-        // Try to find matching texte in database
-        let texteCibleId: string | undefined;
-        if (reference) {
-          const matchingTexte = await prisma.texte.findFirst({
-            where: {
-              OR: [
-                { numero: { contains: reference.replace(/\s+/g, '') } },
-                { cid: { contains: reference.replace(/\s+/g, '') } },
-              ],
-            },
-            select: { id: true },
-          });
-          texteCibleId = matchingTexte?.id;
-        }
-
-        detectedRelations.push({
-          type:
-            type === 'abrogation' ? 'ABROGE' : type === 'modification' ? 'MODIFIE' : 'CITE',
+        rawMatches.push({
+          type: type === 'abrogation' ? 'ABROGE' : type === 'modification' ? 'MODIFIE' : 'CITE',
           reference: reference || match[0],
           context: context.trim(),
-          texteCibleId,
+          normalizedRef: reference ? reference.replace(/\s+/g, '') : '',
         });
       }
     }
+
+    // Phase 2: Batch-resolve all unique references in a single query
+    const uniqueRefs = [...new Set(rawMatches.map(m => m.normalizedRef).filter(Boolean))];
+    const refToIdMap = new Map<string, string>();
+
+    if (uniqueRefs.length > 0) {
+      const matchingTextes = await prisma.texte.findMany({
+        where: {
+          OR: uniqueRefs.flatMap(ref => [
+            { numero: { contains: ref } },
+            { cid: { contains: ref } },
+          ]),
+        },
+        select: { id: true, numero: true, cid: true },
+      });
+
+      // Map each reference to the first matching texte
+      for (const ref of uniqueRefs) {
+        const found = matchingTextes.find(
+          t => (t.numero && t.numero.includes(ref)) || t.cid.includes(ref)
+        );
+        if (found) refToIdMap.set(ref, found.id);
+      }
+    }
+
+    // Phase 3: Build results with resolved IDs
+    const detectedRelations: DetectedRelation[] = rawMatches.map(m => ({
+      type: m.type,
+      reference: m.reference,
+      context: m.context,
+      texteCibleId: m.normalizedRef ? refToIdMap.get(m.normalizedRef) : undefined,
+    }));
 
     return {
       texteId,
@@ -380,94 +400,91 @@ class RelationService {
   }> {
     const nodes: Map<string, GraphNode> = new Map();
     const edges: GraphEdge[] = [];
+    const visited = new Set<string>();
 
-    const traverseRelations = async (id: string, currentDepth: number, visited: Set<string>) => {
-      if (currentDepth >= maxDepth || visited.has(id)) return;
-      visited.add(id);
+    // Batch-load relations for a set of texte IDs in 2 parallel queries
+    const loadRelationsForIds = async (ids: string[]) => {
+      const [outgoing, incoming] = await Promise.all([
+        prisma.texteRelation.findMany({
+          where: { texteSourceId: { in: ids } },
+          include: {
+            texteCible: { select: { id: true, titre: true, nature: true, etat: true } },
+          },
+        }),
+        prisma.texteRelation.findMany({
+          where: { texteCibleId: { in: ids } },
+          include: {
+            texteSource: { select: { id: true, titre: true, nature: true, etat: true } },
+          },
+        }),
+      ]);
+      return { outgoing, incoming };
+    };
 
-      const texte = await prisma.texte.findUnique({
-        where: { id },
-        select: { id: true, titre: true, nature: true, etat: true },
-      });
-
-      if (texte && !nodes.has(id)) {
+    const addNode = (id: string, titre: string, nature: string, etat: string) => {
+      if (!nodes.has(id)) {
         nodes.set(id, {
-          id: texte.id,
-          titre: texte.titre.substring(0, 50) + (texte.titre.length > 50 ? '...' : ''),
-          nature: texte.nature,
-          etat: texte.etat,
+          id,
+          titre: titre.substring(0, 50) + (titre.length > 50 ? '...' : ''),
+          nature,
+          etat,
         });
       }
+    };
 
-      // Outgoing relations
-      const outgoing = await prisma.texteRelation.findMany({
-        where: { texteSourceId: id },
-        include: {
-          texteCible: { select: { id: true, titre: true, nature: true, etat: true } },
-        },
-      });
+    // Load root texte
+    const rootTexte = await prisma.texte.findUnique({
+      where: { id: texteId },
+      select: { id: true, titre: true, nature: true, etat: true },
+    });
+
+    if (!rootTexte) {
+      throw new AppError(404, 'Texte non trouvé');
+    }
+
+    addNode(rootTexte.id, rootTexte.titre, rootTexte.nature, rootTexte.etat);
+
+    // BFS by depth level with batch loading
+    let currentIds = [texteId];
+
+    for (let depth = 0; depth < maxDepth && currentIds.length > 0; depth++) {
+      const unvisitedIds = currentIds.filter(id => !visited.has(id));
+      if (unvisitedIds.length === 0) break;
+
+      for (const id of unvisitedIds) visited.add(id);
+
+      const { outgoing, incoming } = await loadRelationsForIds(unvisitedIds);
+      const nextIds = new Set<string>();
 
       for (const rel of outgoing) {
-        if (!nodes.has(rel.texteCibleId)) {
-          nodes.set(rel.texteCibleId, {
-            id: rel.texteCible.id,
-            titre:
-              rel.texteCible.titre.substring(0, 50) +
-              (rel.texteCible.titre.length > 50 ? '...' : ''),
-            nature: rel.texteCible.nature,
-            etat: rel.texteCible.etat,
-          });
-        }
-
+        addNode(rel.texteCible.id, rel.texteCible.titre, rel.texteCible.nature, rel.texteCible.etat);
         edges.push({
-          source: id,
+          source: rel.texteSourceId,
           target: rel.texteCibleId,
           type: rel.type,
           label: RELATION_LABELS[rel.type] || rel.type,
         });
-
-        await traverseRelations(rel.texteCibleId, currentDepth + 1, visited);
+        if (!visited.has(rel.texteCibleId)) nextIds.add(rel.texteCibleId);
       }
 
-      // Incoming relations
-      const incoming = await prisma.texteRelation.findMany({
-        where: { texteCibleId: id },
-        include: {
-          texteSource: { select: { id: true, titre: true, nature: true, etat: true } },
-        },
-      });
-
       for (const rel of incoming) {
-        if (!nodes.has(rel.texteSourceId)) {
-          nodes.set(rel.texteSourceId, {
-            id: rel.texteSource.id,
-            titre:
-              rel.texteSource.titre.substring(0, 50) +
-              (rel.texteSource.titre.length > 50 ? '...' : ''),
-            nature: rel.texteSource.nature,
-            etat: rel.texteSource.etat,
-          });
-        }
-
-        // Avoid duplicate edges
+        addNode(rel.texteSource.id, rel.texteSource.titre, rel.texteSource.nature, rel.texteSource.etat);
         const edgeExists = edges.some(
-          (e) => e.source === rel.texteSourceId && e.target === id && e.type === rel.type
+          e => e.source === rel.texteSourceId && e.target === rel.texteCibleId && e.type === rel.type
         );
-
         if (!edgeExists) {
           edges.push({
             source: rel.texteSourceId,
-            target: id,
+            target: rel.texteCibleId,
             type: rel.type,
             label: RELATION_LABELS[rel.type] || rel.type,
           });
         }
-
-        await traverseRelations(rel.texteSourceId, currentDepth + 1, visited);
+        if (!visited.has(rel.texteSourceId)) nextIds.add(rel.texteSourceId);
       }
-    };
 
-    await traverseRelations(texteId, 0, new Set());
+      currentIds = Array.from(nextIds);
+    }
 
     return {
       nodes: Array.from(nodes.values()),

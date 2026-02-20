@@ -58,9 +58,7 @@ class TexteRepository {
 
   private readonly includeDetails = {
     articles: {
-      include: {
-        section: true,
-      },
+      orderBy: { ordre: 'asc' as const },
     },
     sections: {
       orderBy: { ordre: 'asc' as const },
@@ -90,37 +88,6 @@ class TexteRepository {
           },
         },
       },
-    },
-    versions: {
-      orderBy: { dateDebut: 'desc' as const },
-    },
-    relationsSource: {
-      include: {
-        texteCible: {
-          select: {
-            id: true,
-            titre: true,
-            nature: true,
-            numero: true,
-            etat: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' as const },
-    },
-    relationsCible: {
-      include: {
-        texteSource: {
-          select: {
-            id: true,
-            titre: true,
-            nature: true,
-            numero: true,
-            dateSignature: true,
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' as const },
     },
   };
 
@@ -213,6 +180,26 @@ class TexteRepository {
     return prisma.texte.delete({
       where: { id },
     });
+  }
+
+  async getStats() {
+    const [total, enVigueur, byNature, recent] = await Promise.all([
+      prisma.texte.count(),
+      prisma.texte.count({ where: { etat: 'VIGUEUR' } }),
+      prisma.texte.groupBy({ by: ['nature'], _count: true }),
+      prisma.texte.findMany({
+        take: 6,
+        orderBy: { createdAt: 'desc' },
+        select: this.selectList,
+      }),
+    ]);
+
+    const natureCounts: Record<string, number> = {};
+    for (const row of byNature) {
+      natureCounts[row.nature] = row._count;
+    }
+
+    return { total, enVigueur, natureCounts, recent };
   }
 
   async exists(id: string): Promise<boolean> {
