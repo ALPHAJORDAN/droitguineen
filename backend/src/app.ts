@@ -14,6 +14,7 @@ import rechercheRouter from './routes/recherche';
 import uploadRouter from './routes/upload';
 import exportRouter from './routes/export';
 import relationsRouter from './routes/relations';
+import { userRepository } from './repositories/user.repository';
 
 export function createApp(): Application {
   const app = express();
@@ -124,6 +125,18 @@ export function createApp(): Application {
 
   // Error handler (must be last)
   app.use(errorHandler);
+
+  // Cleanup expired refresh tokens every hour
+  setInterval(async () => {
+    try {
+      const result = await userRepository.deleteExpiredTokens();
+      if (result.count > 0) {
+        logger.info(`Cleaned up ${result.count} expired refresh tokens`);
+      }
+    } catch (err) {
+      logger.warn('Failed to cleanup expired tokens');
+    }
+  }, 60 * 60 * 1000);
 
   return app;
 }

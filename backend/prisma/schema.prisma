@@ -28,7 +28,6 @@ model Texte {
   
   // État et version
   etat            EtatTexte @default(VIGUEUR)
-  versionEnVigueur Boolean  @default(true)
   
   // Contenu
   visas           String?   @db.Text  // Visas du texte
@@ -58,6 +57,7 @@ model Texte {
   @@index([sousCategorie])
   @@index([datePublication])
   @@index([etat])
+  @@index([createdAt])
 }
 
 // Article d'un texte juridique
@@ -88,7 +88,9 @@ model Article {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
-  @@index([texteId])
+  @@unique([texteId, numero])
+  @@index([texteId, ordre])
+  @@index([sectionId])
   @@index([etat])
 }
 
@@ -115,7 +117,8 @@ model Section {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
   
-  @@index([texteId])
+  @@index([texteId, ordre])
+  @@index([parentId])
 }
 
 // Historique des versions d'un texte
