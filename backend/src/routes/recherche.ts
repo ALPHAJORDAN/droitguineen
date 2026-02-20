@@ -9,11 +9,12 @@ router.get('/suggestions', asyncHandler(async (req: Request, res: Response) => {
     const { q = '', limit = '6' } = req.query;
     const limitNum = Math.min(Math.max(1, parseInt(limit as string, 10) || 6), 10);
 
-    if (!q || (q as string).trim().length < 2) {
+    const trimmedQ = (q as string).trim().slice(0, 500);
+    if (!trimmedQ || trimmedQ.length < 2) {
         return res.json({ query: q, hits: [], processingTimeMs: 0 });
     }
 
-    const result = await searchSuggestions(q as string, limitNum);
+    const result = await searchSuggestions(trimmedQ, limitNum);
 
     res.json({
         query: q,
@@ -37,8 +38,9 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     const pageNum = Math.max(1, parseInt(page as string, 10) || 1);
     const limitNum = Math.min(Math.max(1, parseInt(limit as string, 10) || 20), 100);
 
-    // Vérifier que la requête n'est pas vide
-    if (!q || (q as string).trim().length === 0) {
+    // Vérifier que la requête n'est pas vide et tronquer à 500 chars
+    const trimmedQ = (q as string).trim().slice(0, 500);
+    if (!trimmedQ) {
         return res.status(400).json({
             success: false,
             error: 'Le paramètre de recherche "q" est requis',
@@ -57,12 +59,12 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     const perIndexLimit = Math.min(limitNum, 15);
 
     const [textesResult, articlesResult] = await Promise.all([
-        searchTextes(q as string, {
+        searchTextes(trimmedQ, {
             ...searchOptions,
             limit: perIndexLimit,
             offset,
         }),
-        searchArticles(q as string, {
+        searchArticles(trimmedQ, {
             ...searchOptions,
             limit: perIndexLimit,
             offset,

@@ -43,4 +43,9 @@ export const config = {
   },
 } as const;
 
+// Fail fast if JWT_SECRET is not set in production
+if (config.isProduction && config.jwt.secret === 'dev-secret-change-in-production') {
+  throw new Error('FATAL: JWT_SECRET environment variable must be set in production');
+}
+
 export default config;

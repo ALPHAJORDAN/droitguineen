@@ -8,6 +8,11 @@ vi.mock('../../src/lib/meilisearch', () => ({
   initMeiliSearch: vi.fn().mockResolvedValue(undefined),
   indexTexte: vi.fn().mockResolvedValue(undefined),
   removeTexteFromIndex: vi.fn().mockResolvedValue(undefined),
+  meiliClient: { health: vi.fn().mockResolvedValue({ status: 'available' }) },
+}));
+
+vi.mock('../../src/lib/prisma', () => ({
+  default: { $queryRaw: vi.fn().mockResolvedValue([{ '?column?': 1 }]) },
 }));
 
 describe('API Base Routes', () => {
@@ -26,6 +31,9 @@ describe('API Base Routes', () => {
       expect(response.body.status).toBe('ok');
       expect(response.body.timestamp).toBeDefined();
       expect(response.body.uptime).toBeDefined();
+      expect(response.body.checks).toBeDefined();
+      expect(response.body.checks.database).toBe('ok');
+      expect(response.body.checks.meilisearch).toBe('ok');
     });
   });
 

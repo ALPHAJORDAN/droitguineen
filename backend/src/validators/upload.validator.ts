@@ -18,5 +18,36 @@ export const uploadPdfSchema = z.object({
   extractArticles: z.coerce.boolean().default(true),
 });
 
+// Article schema for confirm upload
+const articleSchema = z.object({
+  numero: z.string().min(1).max(50),
+  contenu: z.string().min(1),
+  ordre: z.number().int().min(0).optional(),
+  etat: EtatTexteEnum.optional(),
+});
+
+// Recursive section schema
+const sectionSchema: z.ZodType<any> = z.lazy(() => z.object({
+  titre: z.string().min(1).max(500),
+  articles: z.array(articleSchema).default([]),
+  enfants: z.array(sectionSchema).default([]),
+}));
+
+// Confirm upload schema - validates the full body for /upload/confirm
+export const confirmUploadSchema = z.object({
+  filePath: z.string().min(1),
+  cid: z.string().min(1).max(100),
+  titre: z.string().min(3).max(500),
+  nature: NatureEnum,
+  sousCategorie: z.string().max(100).optional(),
+  numero: z.string().max(50).optional(),
+  dateSignature: z.string().datetime().optional(),
+  datePublication: z.string().datetime().optional(),
+  sourceJO: z.string().max(200).optional(),
+  articles: z.array(articleSchema).default([]),
+  sections: z.array(sectionSchema).default([]),
+});
+
 // Types exports
 export type UploadPdfInput = z.infer<typeof uploadPdfSchema>;
+export type ConfirmUploadInput = z.infer<typeof confirmUploadSchema>;

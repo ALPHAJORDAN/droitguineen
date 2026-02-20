@@ -130,10 +130,6 @@ class UploadController {
       sections = [],
     } = req.body;
 
-    if (!filePath || !cid || !titre || !nature) {
-      throw new AppError(400, 'Les champs filePath, cid, titre et nature sont requis');
-    }
-
     const texte = await uploadService.createTexteFromPdf({
       cid,
       titre,

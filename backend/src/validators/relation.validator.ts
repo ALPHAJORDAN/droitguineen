@@ -41,6 +41,12 @@ export const updateRelationSchema = z.object({
   dateEffet: z.string().datetime().optional().nullable(),
 });
 
+// Detect relations schema
+export const detectRelationsSchema = z.object({
+  texteId: z.string().uuid('ID du texte invalide'),
+});
+
 // Types exports
 export type CreateRelationInput = z.infer<typeof createRelationSchema>;
 export type UpdateRelationInput = z.infer<typeof updateRelationSchema>;
+export type DetectRelationsInput = z.infer<typeof detectRelationsSchema>;

@@ -474,7 +474,7 @@ export async function searchSuggestions(
     };
 }
 
-// Reindex all existing articles if the articles index is empty
+// Reindex all existing articles if the articles index is empty (cursor-based batching)
 async function reindexAllArticlesIfEmpty(): Promise<void> {
     try {
         // Check if the articles index has any documents
@@ -485,23 +485,40 @@ async function reindexAllArticlesIfEmpty(): Promise<void> {
 
         log.info('Articles index is empty, reindexing existing articles...');
 
-        const textes = await prisma.texte.findMany({
-            include: {
-                articles: {
-                    select: { id: true, numero: true, contenu: true, ordre: true, etat: true },
-                },
-            },
-        });
-
+        const BATCH_SIZE = 100;
         let totalArticles = 0;
-        for (const texte of textes) {
-            if (texte.articles.length > 0) {
-                await indexArticles(texte);
-                totalArticles += texte.articles.length;
+        let totalTextes = 0;
+        let cursor: string | undefined;
+
+        // Cursor-based pagination to avoid loading all textes into memory
+        while (true) {
+            const textes = await prisma.texte.findMany({
+                take: BATCH_SIZE,
+                ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+                orderBy: { id: 'asc' },
+                include: {
+                    articles: {
+                        select: { id: true, numero: true, contenu: true, ordre: true, etat: true },
+                    },
+                },
+            });
+
+            if (textes.length === 0) break;
+
+            for (const texte of textes) {
+                if (texte.articles.length > 0) {
+                    await indexArticles(texte);
+                    totalArticles += texte.articles.length;
+                }
             }
+
+            totalTextes += textes.length;
+            cursor = textes[textes.length - 1].id;
+
+            if (textes.length < BATCH_SIZE) break;
         }
 
-        log.info('Reindexed articles', { totalArticles, totalTextes: textes.length });
+        log.info('Reindexed articles', { totalArticles, totalTextes });
     } catch (error) {
         log.warn('Failed to reindex articles', { err: error });
     }

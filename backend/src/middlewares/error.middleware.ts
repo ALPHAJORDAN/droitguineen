@@ -30,12 +30,22 @@ export function errorHandler(
     }
   };
 
+  // Redact sensitive fields from request body before logging
+  const SENSITIVE_KEYS = ['password', 'token', 'refreshToken', 'secret', 'accessToken'];
+  let sanitizedBody = req.body;
+  if (req.body && typeof req.body === 'object') {
+    sanitizedBody = { ...req.body };
+    for (const key of SENSITIVE_KEYS) {
+      if (key in sanitizedBody) sanitizedBody[key] = '[REDACTED]';
+    }
+  }
+
   logError({
     error: error.message,
     stack: error.stack,
     url: req.url,
     method: req.method,
-    body: req.body,
+    body: sanitizedBody,
     params: req.params,
     query: req.query,
   });

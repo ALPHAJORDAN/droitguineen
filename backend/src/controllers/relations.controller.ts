@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { relationService } from '../services/relation.service';
-import { asyncHandler, AppError } from '../middlewares/error.middleware';
+import { asyncHandler } from '../middlewares/error.middleware';
 import { TypeRelation } from '@prisma/client';
 import { CreateRelationInput, UpdateRelationInput } from '../validators/relation.validator';
 
@@ -76,11 +76,6 @@ class RelationsController {
    */
   detectRelations = asyncHandler(async (req: Request, res: Response) => {
     const { texteId } = req.body;
-
-    if (!texteId) {
-      throw new AppError(400, 'texteId est requis');
-    }
-
     const result = await relationService.detectRelations(texteId);
 
     res.json({

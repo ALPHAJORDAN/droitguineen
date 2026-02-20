@@ -85,6 +85,42 @@ export const authLimiter = rateLimit({
 });
 
 /**
+ * Lois rate limiter
+ * 60 requests per minute
+ */
+export const loisLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: isDev ? 10000 : 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      success: false,
+      error: 'Trop de requêtes sur les textes, veuillez patienter',
+      retryAfter: 60,
+    });
+  },
+});
+
+/**
+ * Relations rate limiter
+ * 30 requests per minute
+ */
+export const relationsLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: isDev ? 10000 : 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      success: false,
+      error: 'Trop de requêtes sur les relations, veuillez patienter',
+      retryAfter: 60,
+    });
+  },
+});
+
+/**
  * Export rate limiter
  * 50 exports per hour
  */

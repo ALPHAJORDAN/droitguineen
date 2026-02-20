@@ -2,7 +2,7 @@ import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import swaggerUi from 'swagger-ui-express';
-import { generalLimiter, searchLimiter, uploadLimiter, exportLimiter, authLimiter } from './middlewares/rateLimiter.middleware';
+import { generalLimiter, searchLimiter, uploadLimiter, exportLimiter, authLimiter, loisLimiter, relationsLimiter } from './middlewares/rateLimiter.middleware';
 import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
 import { requestLogger, logger } from './utils/logger';
 import { swaggerSpec } from './config/swagger';
@@ -15,6 +15,8 @@ import uploadRouter from './routes/upload';
 import exportRouter from './routes/export';
 import relationsRouter from './routes/relations';
 import { userRepository } from './repositories/user.repository';
+import prisma from './lib/prisma';
+import { meiliClient } from './lib/meilisearch';
 
 export function createApp(): Application {
   const app = express();
@@ -64,11 +66,32 @@ export function createApp(): Application {
   app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
   // Health check (before other routes, no rate limiting needed)
-  app.get('/health', (req, res) => {
-    res.json({
-      status: 'ok',
+  app.get('/health', async (req, res) => {
+    const checks: Record<string, 'ok' | 'error'> = {};
+
+    // Check database connectivity
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      checks.database = 'ok';
+    } catch {
+      checks.database = 'error';
+    }
+
+    // Check Meilisearch connectivity
+    try {
+      await meiliClient.health();
+      checks.meilisearch = 'ok';
+    } catch {
+      checks.meilisearch = 'error';
+    }
+
+    const allHealthy = Object.values(checks).every(v => v === 'ok');
+
+    res.status(allHealthy ? 200 : 503).json({
+      status: allHealthy ? 'ok' : 'degraded',
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
+      checks,
     });
   });
 
@@ -114,11 +137,11 @@ export function createApp(): Application {
 
   // Routes with specific rate limiters
   app.use('/auth', authLimiter, authRouter);
-  app.use('/lois', loisRouter);
+  app.use('/lois', loisLimiter, loisRouter);
   app.use('/recherche', searchLimiter, rechercheRouter);
   app.use('/upload', uploadLimiter, uploadRouter);
   app.use('/export', exportLimiter, exportRouter);
-  app.use('/relations', relationsRouter);
+  app.use('/relations', relationsLimiter, relationsRouter);
 
   // 404 handler
   app.use(notFoundHandler);
