@@ -85,6 +85,24 @@ export const authLimiter = rateLimit({
 });
 
 /**
+ * Password change rate limiter
+ * 5 attempts per hour
+ */
+export const passwordChangeLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req: Request, res: Response) => {
+    res.status(429).json({
+      success: false,
+      error: 'Trop de tentatives de changement de mot de passe, réessayez dans une heure',
+      retryAfter: 3600,
+    });
+  },
+});
+
+/**
  * Lois rate limiter
  * 60 requests per minute
  */

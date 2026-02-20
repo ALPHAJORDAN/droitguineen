@@ -27,7 +27,7 @@ import Script from "next/script";
 
 export function LawDetailsClient({ id, initialData }: { id: string; initialData?: Texte }) {
     const { data: texte, isLoading, isError, error } = useLoi(id, initialData);
-    const { data: relationsData } = useRelations(id);
+    const { data: relationsData, isLoading: relationsLoading } = useRelations(id);
     const { user } = useAuth();
     const exportMutation = useExport();
     const searchParams = useSearchParams();
@@ -462,6 +462,12 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                             )}
 
                             {/* Relations */}
+                            {relationsLoading && (
+                                <div className="border-t pt-8 mt-8 text-center text-sm text-muted-foreground">
+                                    <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
+                                    Chargement des relations...
+                                </div>
+                            )}
                             {relationsData && relationsData.counts.total > 0 && (
                                 <RelationsPanel relationsData={relationsData} />
                             )}

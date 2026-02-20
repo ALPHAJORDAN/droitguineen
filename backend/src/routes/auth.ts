@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { authController } from '../controllers/auth.controller';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { validate, validateId } from '../middlewares/validation.middleware';
+import { passwordChangeLimiter } from '../middlewares/rateLimiter.middleware';
 import {
   loginSchema,
   refreshTokenSchema,
@@ -19,7 +20,7 @@ router.post('/refresh', validate(refreshTokenSchema, 'body'), authController.ref
 // Routes authentifiées
 router.post('/logout', authenticate, authController.logout);
 router.get('/me', authenticate, authController.getMe);
-router.put('/change-password', authenticate, validate(changePasswordSchema, 'body'), authController.changePassword);
+router.put('/change-password', authenticate, passwordChangeLimiter, validate(changePasswordSchema, 'body'), authController.changePassword);
 
 // Routes admin (gestion des utilisateurs)
 router.post('/users', authenticate, authorize('ADMIN'), validate(createUserSchema, 'body'), authController.createUser);

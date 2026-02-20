@@ -24,7 +24,12 @@ function LoginPageContent() {
     const { login, isAuthenticated, isLoading: authLoading } = useAuth();
     const router = useRouter();
     const searchParams = useSearchParams();
-    const redirect = searchParams.get("redirect") || "/admin";
+    const redirect = (() => {
+        const param = searchParams.get("redirect");
+        // Only allow relative paths starting with / to prevent open redirect
+        if (param && param.startsWith("/") && !param.startsWith("//")) return param;
+        return "/admin";
+    })();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");

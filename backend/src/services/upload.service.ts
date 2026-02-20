@@ -1,7 +1,7 @@
 import fs from 'fs';
 import prisma from '../lib/prisma';
 import { indexTexte, indexArticles } from '../lib/meilisearch';
-import { Nature, EtatTexte } from '@prisma/client';
+import { Nature, EtatTexte, EtatArticle } from '@prisma/client';
 import { AppError } from '../middlewares/error.middleware';
 import { log } from '../utils/logger';
 import { cleanupOnError } from '../middlewares/upload.middleware';
@@ -252,7 +252,7 @@ class UploadService {
             ordre: startIndex.value + idx,
             texteId,
             sectionId: createdSection.id,
-            etat: EtatTexte.VIGUEUR,
+            etat: EtatArticle.VIGUEUR,
           })),
         });
         startIndex.value += section.articles.length;
@@ -329,7 +329,7 @@ class UploadService {
             contenu: article.contenu,
             ordre: index + 1,
             texteId: texte.id,
-            etat: EtatTexte.VIGUEUR,
+            etat: EtatArticle.VIGUEUR,
           })),
         });
       }

@@ -181,10 +181,10 @@ export function CodeViewer({ articles, fontSize = 'sm', searchQuery = '' }: Code
             {/* Contrôles globaux */}
             {tree.length > 5 && (
                 <div className="flex gap-2 sticky top-20 z-10 bg-background/80 backdrop-blur-sm py-2 border-b mb-4">
-                    <Button variant="ghost" size="sm" onClick={expandAll} className="text-xs h-8">
+                    <Button variant="ghost" size="sm" onClick={expandAll} aria-label="Tout étendre" className="text-xs h-8">
                         <ChevronDown className="h-4 w-4 mr-1" /> Tout étendre
                     </Button>
-                    <Button variant="ghost" size="sm" onClick={collapseAll} className="text-xs h-8">
+                    <Button variant="ghost" size="sm" onClick={collapseAll} aria-label="Tout replier" className="text-xs h-8">
                         <ChevronRight className="h-4 w-4 mr-1" /> Tout replier
                     </Button>
                 </div>

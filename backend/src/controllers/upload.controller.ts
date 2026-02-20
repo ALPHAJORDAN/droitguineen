@@ -10,8 +10,8 @@ class UploadController {
    * GET /upload/files - List all uploaded files
    */
   getFiles = asyncHandler(async (req: Request, res: Response) => {
-    const page = parseInt(req.query.page as string, 10) || 1;
-    const limit = parseInt(req.query.limit as string, 10) || 50;
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string, 10) || 50), 100);
     const files = await uploadService.getUploadedFiles(page, limit);
 
     res.json({

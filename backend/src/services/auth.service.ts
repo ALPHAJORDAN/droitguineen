@@ -5,6 +5,7 @@ import { UserRole } from '@prisma/client';
 import { config } from '../config';
 import { AppError } from '../middlewares/error.middleware';
 import { userRepository } from '../repositories/user.repository';
+import prisma from '../lib/prisma';
 import { CreateUserInput, UpdateUserInput, ChangePasswordInput } from '../validators/auth.validator';
 import { JwtPayload } from '../middlewares/auth.middleware';
 
@@ -40,6 +41,8 @@ class AuthService {
     const user = await userRepository.findByEmail(email);
 
     if (!user) {
+      // Constant-time: run bcrypt even if user not found to prevent timing-based enumeration
+      await bcrypt.hash(password, BCRYPT_ROUNDS);
       throw new AppError(401, 'Email ou mot de passe incorrect');
     }
 
@@ -155,7 +158,7 @@ class AuthService {
       throw new AppError(404, 'Utilisateur non trouvé');
     }
 
-    await userRepository.deleteRefreshTokensByUserId(id);
+    // Cascade delete handles refresh tokens automatically
     await userRepository.delete(id);
   }
 
@@ -171,10 +174,12 @@ class AuthService {
     }
 
     const hashedPassword = await bcrypt.hash(data.newPassword, BCRYPT_ROUNDS);
-    await userRepository.update(userId, { password: hashedPassword });
 
-    // Invalider tous les refresh tokens après changement de mot de passe
-    await userRepository.deleteRefreshTokensByUserId(userId);
+    // Atomic: update password + invalidate all refresh tokens
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({ where: { id: userId }, data: { password: hashedPassword } });
+      await tx.refreshToken.deleteMany({ where: { userId } });
+    });
   }
 }
 

@@ -28,7 +28,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
                     size="sm"
                     disabled={currentPage <= 1}
                     onClick={() => handlePageChange(1)}
-                    aria-label="Premiere page"
+                    aria-label="Première page"
                 >
                     <ChevronsLeft className="h-4 w-4" />
                 </Button>
@@ -37,10 +37,10 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
                     size="sm"
                     disabled={currentPage <= 1}
                     onClick={() => handlePageChange(currentPage - 1)}
-                    aria-label="Page precedente"
+                    aria-label="Page précédente"
                 >
                     <ChevronLeft className="h-4 w-4" />
-                    <span className="hidden sm:inline ml-1">Precedent</span>
+                    <span className="hidden sm:inline ml-1">Précédent</span>
                 </Button>
                 <Button variant="ghost" size="sm" className="bg-primary/10 text-primary">
                     {currentPage}
@@ -60,7 +60,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
                     size="sm"
                     disabled={currentPage >= totalPages}
                     onClick={() => handlePageChange(totalPages)}
-                    aria-label="Derniere page"
+                    aria-label="Dernière page"
                 >
                     <ChevronsRight className="h-4 w-4" />
                 </Button>
