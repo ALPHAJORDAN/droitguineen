@@ -108,12 +108,12 @@ function LoisPageContent() {
     return (
         <div className="flex min-h-screen flex-col">
             <Header />
-            <main className="flex-1 container py-8 px-4 md:px-6">
+            <main id="main-content" className="flex-1 container py-8 px-4 md:px-6">
                 {/* Page header */}
                 <div className="mb-6">
                     <h1 className="text-3xl font-bold tracking-tight">Textes juridiques</h1>
                     <p className="text-muted-foreground mt-1">
-                        Consultez l&apos;ensemble des textes legislatifs et reglementaires de la Republique de Guinee.
+                        Consultez l&apos;ensemble des textes législatifs et réglementaires de la République de Guinée.
                     </p>
                 </div>
 

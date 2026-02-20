@@ -1,5 +1,6 @@
 import { texteRepository, FindAllOptions, CreateTexteData } from '../repositories/texte.repository';
 import { indexTexte, indexArticles, removeTexteFromIndex, removeArticlesFromIndex } from '../lib/meilisearch';
+import { invalidateExportCache } from '../routes/export';
 import { AppError } from '../middlewares/error.middleware';
 import { Prisma } from '@prisma/client';
 import { log } from '../utils/logger';
@@ -155,6 +156,7 @@ class TexteService {
       log.warn('Failed to reindex texte in Meilisearch', { texteId: texte.id, error });
     }
 
+    invalidateExportCache(texte.id);
     log.info('Texte updated', { texteId: texte.id });
 
     return texte;
@@ -181,6 +183,7 @@ class TexteService {
       log.error('Failed to remove texte from Meilisearch — orphaned documents may exist in search index', { texteId: id, error });
     }
 
+    invalidateExportCache(id);
     log.info('Texte deleted', { texteId: id });
   }
 }

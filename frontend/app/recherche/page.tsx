@@ -43,11 +43,11 @@ const TYPE_TO_NATURE: Record<string, string> = {
 // Filter categories for the sidebar
 const FILTER_GROUPS = [
     {
-        label: "Textes legislatifs",
+        label: "Textes législatifs",
         types: ["Constitution", "Lois", "Lois organiques", "Ordonnances"],
     },
     {
-        label: "Textes reglementaires",
+        label: "Textes réglementaires",
         types: ["Decrets", "Arretes", "Circulaires", "Decisions"],
     },
     {
@@ -482,7 +482,7 @@ function SearchHeader() {
     const filters = useSearchFilters();
 
     let title = "Recherche";
-    let subtitle = "Explorez les textes legislatifs et reglementaires de la Republique de Guinee";
+    let subtitle = "Explorez les textes législatifs et réglementaires de la République de Guinée";
 
     if (filters.type && !filters.query) {
         title = filters.type;
@@ -522,7 +522,7 @@ export default function SearchPage() {
                         <SearchFilters />
                     </Suspense>
 
-                    <main className="flex-1 space-y-6">
+                    <main id="main-content" className="flex-1 space-y-6">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                             <div className="flex-1 w-full">
                                 <SearchBar className="max-w-full" showFilters={false} />

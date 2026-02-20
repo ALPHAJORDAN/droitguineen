@@ -11,10 +11,14 @@ import { useState } from "react";
 function CopyableValue({ label, value }: { label: string; value: string }) {
     const [copied, setCopied] = useState(false);
 
-    const handleCopy = () => {
-        navigator.clipboard.writeText(value);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
+    const handleCopy = async () => {
+        try {
+            await navigator.clipboard.writeText(value);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2500);
+        } catch {
+            // Clipboard API not available (e.g. insecure context)
+        }
     };
 
     return (

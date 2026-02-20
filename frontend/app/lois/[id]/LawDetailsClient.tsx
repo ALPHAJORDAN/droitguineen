@@ -27,7 +27,7 @@ import Script from "next/script";
 
 export function LawDetailsClient({ id, initialData }: { id: string; initialData?: Texte }) {
     const { data: texte, isLoading, isError, error } = useLoi(id, initialData);
-    const { data: relationsData, isLoading: relationsLoading } = useRelations(id);
+    const { data: relationsData, isLoading: relationsLoading, isError: relationsError } = useRelations(id);
     const { user } = useAuth();
     const exportMutation = useExport();
     const searchParams = useSearchParams();
@@ -150,10 +150,14 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
         setShowExportMenu(false);
     };
 
-    const handleShare = () => {
-        navigator.clipboard.writeText(window.location.href);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+    const handleShare = async () => {
+        try {
+            await navigator.clipboard.writeText(window.location.href);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        } catch {
+            // Clipboard API not available (e.g. insecure context)
+        }
     };
 
     const handleSearch = useCallback((query: string) => {
@@ -359,6 +363,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                                     key={format}
                                                     className="w-full text-left px-3 py-2 hover:bg-muted text-sm flex items-center gap-2 transition-colors"
                                                     onClick={() => handleExport(format)}
+                                                    aria-label={`Exporter en ${label}`}
                                                 >
                                                     {icon} {label}
                                                 </button>
@@ -419,7 +424,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                         )}
 
                         {/* Main Content */}
-                        <main className={cn("flex-1 min-w-0", !articles.length && "max-w-4xl mx-auto")}>
+                        <main id="main-content" className={cn("flex-1 min-w-0", !articles.length && "max-w-4xl mx-auto")}>
                             {/* Search bar */}
                             {articles.length > 0 && (
                                 <div className="mb-6">
@@ -466,6 +471,12 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                 <div className="border-t pt-8 mt-8 text-center text-sm text-muted-foreground">
                                     <Loader2 className="h-5 w-5 animate-spin inline mr-2" />
                                     Chargement des relations...
+                                </div>
+                            )}
+                            {relationsError && (
+                                <div className="border-t pt-8 mt-8 text-center text-sm text-muted-foreground">
+                                    <AlertCircle className="h-5 w-5 inline mr-2 text-destructive" />
+                                    Impossible de charger les relations.
                                 </div>
                             )}
                             {relationsData && relationsData.counts.total > 0 && (

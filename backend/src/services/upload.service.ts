@@ -71,7 +71,13 @@ class UploadService {
    */
   async extractTextFromPdf(filePath: string): Promise<{ text: string; method: 'native' | 'ocr' }> {
     try {
-      const ocrResult: OCRResult = await pipelineExtractText(filePath);
+      const PDF_TIMEOUT = 120_000; // 2 minutes
+      const ocrResult: OCRResult = await Promise.race([
+        pipelineExtractText(filePath),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new AppError(408, 'Extraction PDF trop longue (timeout)')), PDF_TIMEOUT)
+        ),
+      ]);
       const cleanedText = cleanText(ocrResult.text);
 
       // Map 'hybrid' to 'ocr' for backward compatibility

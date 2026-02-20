@@ -18,7 +18,7 @@ const quickFilters = [
     { label: "Constitution", href: "/recherche?type=Constitution" },
     { label: "Lois", href: "/recherche?type=Lois" },
     { label: "Codes", href: "/recherche?type=Codes" },
-    { label: "Decrets", href: "/recherche?type=Decrets" },
+    { label: "Décrets", href: "/recherche?type=Decrets" },
     { label: "Jurisprudence", href: "/recherche?type=Jurisprudence" },
 ];
 
@@ -170,7 +170,7 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                             )} />
                             <input
                                 type="text"
-                                placeholder="Rechercher une loi, un code, un decret..."
+                                placeholder="Rechercher une loi, un code, un décret..."
                                 aria-label="Rechercher dans les textes juridiques"
                                 className="flex-1 bg-transparent text-base sm:text-lg outline-none placeholder:text-muted-foreground"
                                 value={query}

@@ -69,6 +69,9 @@ function HeaderContent() {
 
     return (
         <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/80 backdrop-blur-md supports-[backdrop-filter]:bg-background/60">
+            <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:top-2 focus:left-2 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:text-sm">
+                Aller au contenu principal
+            </a>
             <div className="container flex h-14 items-center">
                 <Sheet open={open} onOpenChange={setOpen}>
                     <SheetTrigger asChild>

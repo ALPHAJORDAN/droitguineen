@@ -19,37 +19,37 @@ import {
 
 const CATEGORIES = [
     { nature: "LOI_CONSTITUTIONNELLE", type: "Constitution", label: "Constitution", description: "Loi fondamentale", icon: <BookOpen className="h-7 w-7" /> },
-    { nature: "LOI", type: "Lois", label: "Lois", description: "Textes legislatifs", icon: <ScrollText className="h-7 w-7" /> },
-    { nature: "LOI_ORGANIQUE", type: "Lois organiques", label: "Lois organiques", description: "Lois a valeur constitutionnelle", icon: <Scale className="h-7 w-7" /> },
-    { nature: "ORDONNANCE", type: "Ordonnances", label: "Ordonnances", description: "Actes du pouvoir executif", icon: <Gavel className="h-7 w-7" /> },
-    { nature: "DECRET", type: "Decrets", label: "Decrets", description: "Actes reglementaires", icon: <FileCheck className="h-7 w-7" /> },
-    { nature: "ARRETE", type: "Arretes", label: "Arretes", description: "Decisions administratives", icon: <FileText className="h-7 w-7" /> },
-    { nature: "CODE", type: "Codes", label: "Codes", description: "Recueils thematiques", icon: <BookOpen className="h-7 w-7" /> },
-    { nature: "JURISPRUDENCE", type: "Jurisprudence", label: "Jurisprudence", description: "Decisions de justice", icon: <Scale className="h-7 w-7" /> },
-    { nature: "TRAITE", type: "Traites", label: "Traites", description: "Accords internationaux", icon: <ScrollText className="h-7 w-7" /> },
+    { nature: "LOI", type: "Lois", label: "Lois", description: "Textes législatifs", icon: <ScrollText className="h-7 w-7" /> },
+    { nature: "LOI_ORGANIQUE", type: "Lois organiques", label: "Lois organiques", description: "Lois à valeur constitutionnelle", icon: <Scale className="h-7 w-7" /> },
+    { nature: "ORDONNANCE", type: "Ordonnances", label: "Ordonnances", description: "Actes du pouvoir exécutif", icon: <Gavel className="h-7 w-7" /> },
+    { nature: "DECRET", type: "Decrets", label: "Décrets", description: "Actes réglementaires", icon: <FileCheck className="h-7 w-7" /> },
+    { nature: "ARRETE", type: "Arretes", label: "Arrêtés", description: "Décisions administratives", icon: <FileText className="h-7 w-7" /> },
+    { nature: "CODE", type: "Codes", label: "Codes", description: "Recueils thématiques", icon: <BookOpen className="h-7 w-7" /> },
+    { nature: "JURISPRUDENCE", type: "Jurisprudence", label: "Jurisprudence", description: "Décisions de justice", icon: <Scale className="h-7 w-7" /> },
+    { nature: "TRAITE", type: "Traites", label: "Traités", description: "Accords internationaux", icon: <ScrollText className="h-7 w-7" /> },
     { nature: "CONVENTION", type: "Conventions", label: "Conventions", description: "Conventions internationales", icon: <ScrollText className="h-7 w-7" /> },
 ];
 
 const FEATURES = [
     {
         icon: <Search className="h-6 w-6" />,
-        title: "Recherche avancee",
-        description: "Recherche plein texte dans tous les textes et articles avec filtres par type, etat et date.",
+        title: "Recherche avancée",
+        description: "Recherche plein texte dans tous les textes et articles avec filtres par type, état et date.",
     },
     {
         icon: <BookMarked className="h-6 w-6" />,
-        title: "Consultation structuree",
-        description: "Textes organises avec table des matieres hierarchique et navigation par section.",
+        title: "Consultation structurée",
+        description: "Textes organisés avec table des matières hiérarchique et navigation par section.",
     },
     {
         icon: <Download className="h-6 w-6" />,
         title: "Export multi-format",
-        description: "Telechargez les textes en PDF, Word (DOCX), HTML ou JSON.",
+        description: "Téléchargez les textes en PDF, Word (DOCX), HTML ou JSON.",
     },
     {
         icon: <Compass className="h-6 w-6" />,
-        title: "Exploration par categorie",
-        description: "Parcourez les textes par nature, etat, date de publication ou signataire.",
+        title: "Exploration par catégorie",
+        description: "Parcourez les textes par nature, état, date de publication ou signataire.",
     },
 ];
 
@@ -73,17 +73,17 @@ function HomeContent() {
     return (
         <div className="flex min-h-screen flex-col">
             <Header />
-            <main className="flex-1">
+            <main id="main-content" className="flex-1">
                 {/* Hero Section */}
                 <section className="w-full min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gradient-to-b from-accent/30 via-background to-background">
                     <div className="container px-4 md:px-6 w-full -mt-[80px]">
                         <div className="flex flex-col items-center space-y-8 text-center">
                             <div className="space-y-4 max-w-3xl">
                                 <h1 className="text-4xl font-bold tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-                                    Le Droit Guineen, <span className="text-primary">Accessible a Tous</span>
+                                    Le Droit Guinéen, <span className="text-primary">Accessible à Tous</span>
                                 </h1>
                                 <p className="mx-auto max-w-[700px] text-muted-foreground text-lg md:text-xl">
-                                    Accedez facilement aux lois, decrets et au Journal Officiel de la Republique de Guinee.
+                                    Accédez facilement aux lois, décrets et au Journal Officiel de la République de Guinée.
                                 </p>
                             </div>
                             <div className="w-full max-w-4xl px-4">

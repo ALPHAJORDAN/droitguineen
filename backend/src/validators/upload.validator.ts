@@ -24,7 +24,7 @@ export const uploadPdfSchema = z.object({
 // Article schema for confirm upload
 const articleSchema = z.object({
   numero: z.string().min(1).max(50),
-  contenu: z.string().min(1),
+  contenu: z.string().min(1).max(500000),
   ordre: z.number().int().min(0).optional(),
   etat: EtatTexteEnum.optional(),
 });

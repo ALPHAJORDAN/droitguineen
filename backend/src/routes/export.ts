@@ -16,6 +16,15 @@ const MAX_CACHE_SIZE = 50;
 const exportCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
+/** Invalidate all cached export data for a given texte ID */
+export function invalidateExportCache(texteId: string) {
+    for (const key of exportCache.keys()) {
+        if (key.startsWith(`${texteId}:`)) {
+            exportCache.delete(key);
+        }
+    }
+}
+
 async function loadTexteForExport(id: string, include: object, format: string = 'default') {
     const cacheKey = `${id}:${format}`;
     const now = Date.now();

@@ -38,7 +38,7 @@ export const EtatArticleEnum = z.enum([
 // Article schema
 const articleSchema = z.object({
   numero: z.string().min(1, 'Numéro d\'article requis'),
-  contenu: z.string().min(10, 'Le contenu doit faire au moins 10 caractères'),
+  contenu: z.string().min(10, 'Le contenu doit faire au moins 10 caractères').max(500000),
   etat: EtatArticleEnum.optional(),
   dateDebut: z.string().datetime().optional(),
   dateFin: z.string().datetime().optional(),
