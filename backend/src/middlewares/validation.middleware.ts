@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { AppError } from './error.middleware';
 
 type ZodSchema = z.ZodType<any, any, any>;
 
@@ -32,48 +31,6 @@ export function validate(schema: ZodSchema, source: ValidationSource = 'body') {
       }
       next(error);
     }
-  };
-}
-
-/**
- * Validate multiple sources at once
- */
-export function validateMultiple(schemas: {
-  body?: ZodSchema;
-  query?: ZodSchema;
-  params?: ZodSchema;
-}) {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    const errors: Array<{ source: string; field: string; message: string }> = [];
-
-    for (const [source, schema] of Object.entries(schemas)) {
-      if (schema) {
-        try {
-          const data = await schema.parseAsync(req[source as ValidationSource]);
-          req[source as ValidationSource] = data;
-        } catch (error) {
-          if (error instanceof z.ZodError) {
-            errors.push(
-              ...error.issues.map((e: z.ZodIssue) => ({
-                source,
-                field: e.path.join('.'),
-                message: e.message,
-              }))
-            );
-          }
-        }
-      }
-    }
-
-    if (errors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        error: 'Erreur de validation',
-        details: errors,
-      });
-    }
-
-    next();
   };
 }
 

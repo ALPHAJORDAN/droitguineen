@@ -97,17 +97,6 @@ export const paginationSchema = z.object({
   search: z.string().max(500).optional(),
 });
 
-// Search schema
-export const searchSchema = z.object({
-  q: z.string().min(1, 'Requête de recherche requise').max(500),
-  nature: NatureEnum.optional(),
-  etat: EtatTexteEnum.optional(),
-  dateDebut: z.string().datetime().optional(),
-  dateFin: z.string().datetime().optional(),
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-});
-
 // ID parameter schema
 export const idParamSchema = z.object({
   id: z.string().uuid('ID invalide'),
@@ -117,4 +106,3 @@ export const idParamSchema = z.object({
 export type CreateLoiInput = z.infer<typeof createLoiSchema>;
 export type UpdateLoiInput = z.infer<typeof updateLoiSchema>;
 export type PaginationInput = z.infer<typeof paginationSchema>;
-export type SearchInput = z.infer<typeof searchSchema>;

@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   createRelationSchema,
   updateRelationSchema,
-  queryRelationsSchema,
   TypeRelationEnum,
 } from '../../../src/validators/relation.validator';
 
@@ -109,31 +108,6 @@ describe('Relation Validators', () => {
 
       const result = updateRelationSchema.safeParse(update);
       expect(result.success).toBe(false);
-    });
-  });
-
-  describe('queryRelationsSchema', () => {
-    it('should provide default values', () => {
-      const result = queryRelationsSchema.safeParse({});
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.direction).toBe('both');
-        expect(result.data.page).toBe(1);
-        expect(result.data.limit).toBe(20);
-      }
-    });
-
-    it('should accept valid query parameters', () => {
-      const query = {
-        texteId: '550e8400-e29b-41d4-a716-446655440000',
-        type: 'ABROGE',
-        direction: 'source',
-        page: 2,
-        limit: 50,
-      };
-
-      const result = queryRelationsSchema.safeParse(query);
-      expect(result.success).toBe(true);
     });
   });
 

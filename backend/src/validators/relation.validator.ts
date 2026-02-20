@@ -41,30 +41,6 @@ export const updateRelationSchema = z.object({
   dateEffet: z.string().datetime().optional().nullable(),
 });
 
-// Query relations schema
-export const queryRelationsSchema = z.object({
-  texteId: z.string().uuid().optional(),
-  type: TypeRelationEnum.optional(),
-  direction: z.enum(['source', 'cible', 'both']).default('both'),
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-});
-
-// Bulk create relations schema
-export const bulkCreateRelationsSchema = z.object({
-  relations: z.array(createRelationSchema).min(1).max(100),
-});
-
-// Relation analysis schema (for auto-detection)
-export const analyzeRelationsSchema = z.object({
-  texteId: z.string().uuid('ID du texte invalide'),
-  autoDetect: z.coerce.boolean().default(true),
-  includeTypes: z.array(TypeRelationEnum).optional(),
-});
-
 // Types exports
 export type CreateRelationInput = z.infer<typeof createRelationSchema>;
 export type UpdateRelationInput = z.infer<typeof updateRelationSchema>;
-export type QueryRelationsInput = z.infer<typeof queryRelationsSchema>;
-export type BulkCreateRelationsInput = z.infer<typeof bulkCreateRelationsSchema>;
-export type AnalyzeRelationsInput = z.infer<typeof analyzeRelationsSchema>;

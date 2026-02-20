@@ -101,4 +101,3 @@ class LoisController {
 }
 
 export const loisController = new LoisController();
-export default loisController;

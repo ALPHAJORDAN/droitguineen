@@ -157,4 +157,3 @@ class UploadController {
 }
 
 export const uploadController = new UploadController();
-export default uploadController;

@@ -107,4 +107,3 @@ class RelationsController {
 }
 
 export const relationsController = new RelationsController();
-export default relationsController;

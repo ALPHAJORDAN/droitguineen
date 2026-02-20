@@ -43,34 +43,4 @@ export const config = {
   },
 } as const;
 
-// Validate required configuration
-export function validateConfig(): void {
-  const errors: string[] = [];
-
-  if (!config.databaseUrl) {
-    errors.push('DATABASE_URL is required');
-  }
-
-  if (config.isProduction && !config.meiliMasterKey) {
-    errors.push('MEILI_MASTER_KEY is required in production');
-  }
-
-  if (config.googleVision.enabled) {
-    if (!config.googleVision.projectId) {
-      errors.push('GOOGLE_CLOUD_PROJECT_ID is required when Google Vision is enabled');
-    }
-    if (!config.googleVision.credentialsPath) {
-      errors.push('GOOGLE_APPLICATION_CREDENTIALS is required when Google Vision is enabled');
-    }
-  }
-
-  if (config.isProduction && config.jwt.secret === 'dev-secret-change-in-production') {
-    errors.push('JWT_SECRET must be set in production');
-  }
-
-  if (errors.length > 0) {
-    throw new Error(`Configuration errors:\n${errors.join('\n')}`);
-  }
-}
-
 export default config;

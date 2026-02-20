@@ -3,7 +3,6 @@ import {
   createLoiSchema,
   updateLoiSchema,
   paginationSchema,
-  searchSchema,
   NatureEnum,
   EtatTexteEnum,
 } from '../../../src/validators/loi.validator';
@@ -179,39 +178,6 @@ describe('Loi Validators', () => {
       if (result.success) {
         expect(result.data.nature).toBe('DECRET');
       }
-    });
-  });
-
-  describe('searchSchema', () => {
-    it('should validate search query', () => {
-      const result = searchSchema.safeParse({
-        q: 'code civil',
-      });
-
-      expect(result.success).toBe(true);
-      if (result.success) {
-        expect(result.data.q).toBe('code civil');
-        expect(result.data.page).toBe(1);
-        expect(result.data.limit).toBe(20);
-      }
-    });
-
-    it('should reject empty query', () => {
-      const result = searchSchema.safeParse({
-        q: '',
-      });
-
-      expect(result.success).toBe(false);
-    });
-
-    it('should accept filters with search', () => {
-      const result = searchSchema.safeParse({
-        q: 'constitution',
-        nature: 'LOI_CONSTITUTIONNELLE',
-        etat: 'VIGUEUR',
-      });
-
-      expect(result.success).toBe(true);
     });
   });
 
