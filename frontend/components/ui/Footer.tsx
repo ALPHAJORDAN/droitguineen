@@ -38,7 +38,7 @@ export function Footer() {
                                 </Link>
                             </li>
                             <li>
-                                <Link href="/recherche?type=Traités" className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors">
+                                <Link href="/recherche?type=Traites" className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors">
                                     <FileText className="h-3.5 w-3.5" /> Traités
                                 </Link>
                             </li>

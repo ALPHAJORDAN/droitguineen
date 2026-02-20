@@ -43,66 +43,31 @@ export async function initMeiliSearch(): Promise<Index> {
             textesIndex = meiliClient.index(TEXTES_INDEX_NAME);
         }
 
-        // Searchable attributes ordered by relevance (most important first)
-        // Removed 'articles' - article content is searched via the dedicated articles index
-        await textesIndex.updateSearchableAttributes([
-            'titre',
-            'titreComplet',
-            'numero',
-            'nor',
-            'visas',
-            'signataires',
+        // Configure textes index settings (await each task to ensure completion)
+        const textesConfigTasks = await Promise.all([
+            textesIndex.updateSearchableAttributes([
+                'titre', 'titreComplet', 'numero', 'nor', 'visas', 'signataires',
+            ]),
+            textesIndex.updateRankingRules([
+                'words', 'typo', 'proximity', 'attribute', 'sort', 'exactness',
+            ]),
+            textesIndex.updateTypoTolerance({
+                enabled: true,
+                minWordSizeForTypos: { oneTypo: 5, twoTypos: 9 },
+            }),
+            textesIndex.updateStopWords(FRENCH_STOP_WORDS),
+            textesIndex.updateFilterableAttributes([
+                'nature', 'etat', 'datePublication', 'dateSignature',
+            ]),
+            textesIndex.updateSortableAttributes([
+                'datePublication', 'dateSignature', 'createdAt',
+            ]),
+            textesIndex.updateDisplayedAttributes([
+                'id', 'cid', 'nor', 'eli', 'titre', 'titreComplet',
+                'nature', 'numero', 'dateSignature', 'datePublication', 'etat', 'sourceJO',
+            ]),
         ]);
-
-        // Ranking rules: prioritize exact matches and attribute order
-        await textesIndex.updateRankingRules([
-            'words',
-            'typo',
-            'proximity',
-            'attribute',
-            'sort',
-            'exactness',
-        ]);
-
-        // Stricter typo tolerance for legal precision
-        await textesIndex.updateTypoTolerance({
-            enabled: true,
-            minWordSizeForTypos: {
-                oneTypo: 5,    // Only allow 1 typo for words >= 5 chars
-                twoTypos: 9,   // Only allow 2 typos for words >= 9 chars
-            },
-        });
-
-        // French stop words so "du", "de", "la" etc. don't pollute ranking
-        await textesIndex.updateStopWords(FRENCH_STOP_WORDS);
-
-        await textesIndex.updateFilterableAttributes([
-            'nature',
-            'etat',
-            'datePublication',
-            'dateSignature',
-        ]);
-
-        await textesIndex.updateSortableAttributes([
-            'datePublication',
-            'dateSignature',
-            'createdAt',
-        ]);
-
-        await textesIndex.updateDisplayedAttributes([
-            'id',
-            'cid',
-            'nor',
-            'eli',
-            'titre',
-            'titreComplet',
-            'nature',
-            'numero',
-            'dateSignature',
-            'datePublication',
-            'etat',
-            'sourceJO',
-        ]);
+        await Promise.all(textesConfigTasks.map(t => meiliClient.waitForTask(t.taskUid)));
 
         log.info('Meilisearch index "textes" configured successfully');
 
@@ -133,61 +98,31 @@ async function initArticlesIndex(): Promise<Index> {
         articlesIndex = meiliClient.index(ARTICLES_INDEX_NAME);
     }
 
-    await articlesIndex.updateSearchableAttributes([
-        'contenu',
-        'texteTitre',
-        'numero',
+    // Configure articles index settings (await each task to ensure completion)
+    const articlesConfigTasks = await Promise.all([
+        articlesIndex.updateSearchableAttributes([
+            'contenu', 'texteTitre', 'numero',
+        ]),
+        articlesIndex.updateRankingRules([
+            'words', 'typo', 'proximity', 'attribute', 'sort', 'exactness',
+        ]),
+        articlesIndex.updateTypoTolerance({
+            enabled: true,
+            minWordSizeForTypos: { oneTypo: 5, twoTypos: 9 },
+        }),
+        articlesIndex.updateStopWords(FRENCH_STOP_WORDS),
+        articlesIndex.updateFilterableAttributes([
+            'texteId', 'texteNature', 'texteEtat', 'texteDatePublication', 'etat', 'numero',
+        ]),
+        articlesIndex.updateSortableAttributes([
+            'ordre', 'texteDatePublication',
+        ]),
+        articlesIndex.updateDisplayedAttributes([
+            'id', 'numero', 'contenu', 'ordre', 'etat',
+            'texteId', 'texteTitre', 'texteNature', 'texteNumero', 'texteEtat', 'texteDatePublication',
+        ]),
     ]);
-
-    // Ranking rules for articles
-    await articlesIndex.updateRankingRules([
-        'words',
-        'typo',
-        'proximity',
-        'attribute',
-        'sort',
-        'exactness',
-    ]);
-
-    // Stricter typo tolerance
-    await articlesIndex.updateTypoTolerance({
-        enabled: true,
-        minWordSizeForTypos: {
-            oneTypo: 5,
-            twoTypos: 9,
-        },
-    });
-
-    // French stop words
-    await articlesIndex.updateStopWords(FRENCH_STOP_WORDS);
-
-    await articlesIndex.updateFilterableAttributes([
-        'texteId',
-        'texteNature',
-        'texteEtat',
-        'texteDatePublication',
-        'etat',
-        'numero',
-    ]);
-
-    await articlesIndex.updateSortableAttributes([
-        'ordre',
-        'texteDatePublication',
-    ]);
-
-    await articlesIndex.updateDisplayedAttributes([
-        'id',
-        'numero',
-        'contenu',
-        'ordre',
-        'etat',
-        'texteId',
-        'texteTitre',
-        'texteNature',
-        'texteNumero',
-        'texteEtat',
-        'texteDatePublication',
-    ]);
+    await Promise.all(articlesConfigTasks.map(t => meiliClient.waitForTask(t.taskUid)));
 
     log.info('Meilisearch index "articles" configured successfully');
     return articlesIndex;

@@ -54,7 +54,7 @@ export function RelationsPanel({ relationsData }: RelationsPanelProps) {
                                 .flatMap(rt => {
                                     const rels = relationsData.relations[rt.key as keyof typeof relationsData.relations];
                                     return rels.map(rel => (
-                                        <li key={rel.id} className="px-4 py-3 flex items-start gap-2 text-sm hover:bg-muted/30 transition-colors">
+                                        <li key={`${rt.key}-${rel.id}`} className="px-4 py-3 flex items-start gap-2 text-sm hover:bg-muted/30 transition-colors">
                                             <span className={cn("font-medium flex-shrink-0 mt-0.5", rt.color)}>
                                                 {rt.label}
                                             </span>
@@ -79,7 +79,7 @@ export function RelationsPanel({ relationsData }: RelationsPanelProps) {
                                 .flatMap(rt => {
                                     const rels = relationsData.relations[rt.key as keyof typeof relationsData.relations];
                                     return rels.map(rel => (
-                                        <li key={rel.id} className="px-4 py-3 flex items-start gap-2 text-sm hover:bg-muted/30 transition-colors">
+                                        <li key={`${rt.key}-${rel.id}`} className="px-4 py-3 flex items-start gap-2 text-sm hover:bg-muted/30 transition-colors">
                                             <span className={cn("font-medium flex-shrink-0 mt-0.5", rt.color)}>
                                                 {rt.label}
                                             </span>

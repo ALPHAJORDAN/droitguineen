@@ -15,6 +15,11 @@ export function formatDate(dateString?: string): string {
     });
 }
 
+/** Sanitize article numero for use as HTML ID attribute */
+export function articleId(numero: string): string {
+    return `article-${numero.replace(/[^a-zA-Z0-9-_]/g, '-')}`;
+}
+
 /** Shared ETAT_STYLES mapping used across all pages */
 export const ETAT_STYLES: Record<string, string> = {
     VIGUEUR: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",

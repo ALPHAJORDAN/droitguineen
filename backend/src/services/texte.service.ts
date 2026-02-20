@@ -10,9 +10,15 @@ class TexteService {
    */
   private sortArticlesByNumber(articles: any[]): any[] {
     return articles.sort((a, b) => {
-      const numA = parseInt(a.numero.replace(/\D/g, ''), 10) || 0;
-      const numB = parseInt(b.numero.replace(/\D/g, ''), 10) || 0;
-      return numA - numB;
+      const extractNum = (s: string) => {
+        const match = s.match(/^(\d+)/);
+        return match ? parseInt(match[1], 10) : 0;
+      };
+      const numA = extractNum(a.numero);
+      const numB = extractNum(b.numero);
+      if (numA !== numB) return numA - numB;
+      // Tie-break by suffix for "1bis", "1ter", "1quater" etc.
+      return a.numero.localeCompare(b.numero, 'fr');
     });
   }
 

@@ -241,8 +241,11 @@ class RelationService {
         },
       });
 
-      // If the relation type changed, recalculate the target texte's state
-      if (data.type && data.type !== oldRelation.type) {
+      // Recalculate if type changed or dateEffet changed (affects dateAbrogation)
+      const typeChanged = data.type && data.type !== oldRelation.type;
+      const dateEffetChanged = data.dateEffet !== undefined &&
+        data.dateEffet !== (oldRelation.dateEffet?.toISOString() ?? null);
+      if (typeChanged || dateEffetChanged) {
         await this.recalculateTexteState(oldRelation.texteCibleId, tx);
       }
 

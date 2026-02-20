@@ -22,7 +22,7 @@ import { ToastProvider } from "@/components/admin/Toast";
 import { useAuth } from "@/lib/auth";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
-import { cn, formatDate, ETAT_STYLES } from "@/lib/utils";
+import { cn, formatDate, ETAT_STYLES, articleId } from "@/lib/utils";
 import Script from "next/script";
 
 export function LawDetailsClient({ id, initialData }: { id: string; initialData?: Texte }) {
@@ -85,7 +85,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
             { rootMargin: "-100px 0px -60% 0px", threshold: 0 }
         );
         texte.articles.forEach((a) => {
-            const el = document.getElementById(`article-${a.numero}`);
+            const el = document.getElementById(articleId(a.numero));
             if (el) observer.observe(el);
         });
         return () => {
@@ -111,7 +111,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
         // Delay to ensure DOM is rendered
         const timer = setTimeout(() => {
             if (aborted) return;
-            const el = document.getElementById(`article-${articleParam}`);
+            const el = document.getElementById(articleId(articleParam));
             if (el) {
                 // Suspend IntersectionObserver during programmatic scroll
                 scrollingToArticle.current = true;
@@ -119,7 +119,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                 document.querySelector('.article-active')?.classList.remove('article-active');
                 // Mark the target article as active
                 el.classList.add('article-active');
-                setActiveArticle(`article-${articleParam}`);
+                setActiveArticle(articleId(articleParam));
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 el.classList.add('article-flash');
                 flashTimer = setTimeout(() => el.classList.remove('article-flash'), 1500);

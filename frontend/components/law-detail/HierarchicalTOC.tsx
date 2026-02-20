@@ -3,7 +3,7 @@
 import { Section, Article } from "@/lib/api";
 import { ChevronRight, List, FileText } from "lucide-react";
 import { useState, useCallback } from "react";
-import { cn } from "@/lib/utils";
+import { cn, articleId } from "@/lib/utils";
 import {
     Sheet,
     SheetContent,
@@ -94,7 +94,7 @@ function FlatArticleList({
 }) {
     const handleClick = (e: React.MouseEvent, articleNumero: string) => {
         e.preventDefault();
-        const el = document.getElementById(`article-${articleNumero}`);
+        const el = document.getElementById(articleId(articleNumero));
         if (el) {
             el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             el.classList.add('article-flash');
@@ -108,11 +108,11 @@ function FlatArticleList({
             {articles.map((article) => (
                 <button
                     key={article.id}
-                    data-toc-target={`article-${article.numero}`}
+                    data-toc-target={articleId(article.numero)}
                     onClick={(e) => handleClick(e, article.numero)}
                     className={cn(
                         "block w-full text-left text-sm py-1.5 px-3 rounded-md transition-all duration-200 relative",
-                        activeArticle === `article-${article.numero}`
+                        activeArticle === articleId(article.numero)
                             ? "toc-item-active bg-primary/8 text-primary font-medium pl-4"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                     )}
@@ -180,7 +180,7 @@ function SectionNode({
             setExpanded(!expanded);
         }
         if (firstArticle) {
-            const el = document.getElementById(`article-${firstArticle.numero}`);
+            const el = document.getElementById(articleId(firstArticle.numero));
             if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
             onNavigate?.();
         }
@@ -236,10 +236,10 @@ function SectionNode({
                     {(section.articles ?? []).map((article) => (
                         <button
                             key={article.id}
-                            data-toc-target={`article-${article.numero}`}
+                            data-toc-target={articleId(article.numero)}
                             onClick={(e) => {
                                 e.stopPropagation();
-                                const el = document.getElementById(`article-${article.numero}`);
+                                const el = document.getElementById(articleId(article.numero));
                                 if (el) {
                                     el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                                     el.classList.add('article-flash');
@@ -249,7 +249,7 @@ function SectionNode({
                             }}
                             className={cn(
                                 "block w-full text-left text-xs py-1 px-3 rounded-md transition-all duration-200 relative",
-                                activeArticle === `article-${article.numero}`
+                                activeArticle === articleId(article.numero)
                                     ? "toc-item-active bg-primary/8 text-primary font-medium pl-4"
                                     : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                             )}

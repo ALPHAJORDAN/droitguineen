@@ -21,7 +21,7 @@ function CopyableValue({ label, value }: { label: string; value: string }) {
         <button
             onClick={handleCopy}
             className="text-left group"
-            title="Cliquer pour copier"
+            aria-label={`Copier ${label}: ${value}`}
         >
             <span className="text-xs text-muted-foreground block">{label}</span>
             <span className="text-sm font-mono group-hover:text-primary transition-colors">

@@ -4,7 +4,7 @@ import { Article } from "@/lib/api";
 import { ChevronRight, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { Button } from "@/components/ui/Button";
-import { cn, ETAT_STYLES } from "@/lib/utils";
+import { cn, ETAT_STYLES, articleId } from "@/lib/utils";
 
 interface CodeViewerProps {
     articles: Article[];
@@ -386,7 +386,7 @@ const ArticleBlock = memo(function ArticleBlock({ article, fontSize, searchQuery
 
     return (
         <div
-            id={`article-${article.numero}`}
+            id={articleId(article.numero)}
             className={cn(
                 "article-card scroll-mt-32 group relative",
                 "rounded-xl border border-border/40 dark:border-border/20 bg-card",
@@ -418,7 +418,7 @@ const ArticleBlock = memo(function ArticleBlock({ article, fontSize, searchQuery
                     </h4>
                     {/* Permalink - visible on hover */}
                     <a
-                        href={`#article-${article.numero}`}
+                        href={`#${articleId(article.numero)}`}
                         className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-muted-foreground hover:text-primary"
                         title="Lien permanent"
                     >

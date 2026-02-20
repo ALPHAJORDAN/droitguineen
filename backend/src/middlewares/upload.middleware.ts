@@ -3,6 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import { Request, Response, NextFunction } from 'express';
+import { log } from '../utils/logger';
 import { AppError } from './error.middleware';
 import config from '../config';
 
@@ -101,7 +102,7 @@ export function cleanupOnError(filePath?: string) {
     try {
       fs.unlinkSync(filePath);
     } catch (error) {
-      console.error('Failed to cleanup file:', filePath, error);
+      log.warn('Failed to cleanup file', { filePath, error });
     }
   }
 }

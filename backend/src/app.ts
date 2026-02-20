@@ -157,7 +157,10 @@ export function createApp(): Application {
 
   // Cleanup expired refresh tokens every hour (with error tracking)
   let tokenCleanupFailures = 0;
+  let isCleaningUp = false;
   setInterval(async () => {
+    if (isCleaningUp) return;
+    isCleaningUp = true;
     try {
       const result = await userRepository.deleteExpiredTokens();
       tokenCleanupFailures = 0;
@@ -167,6 +170,8 @@ export function createApp(): Application {
     } catch (err) {
       tokenCleanupFailures++;
       logger.error({ err, consecutiveFailures: tokenCleanupFailures }, 'Failed to cleanup expired tokens');
+    } finally {
+      isCleaningUp = false;
     }
   }, 60 * 60 * 1000);
 
