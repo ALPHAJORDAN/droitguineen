@@ -202,17 +202,6 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                                     <X className="h-5 w-5" />
                                 </button>
                             )}
-                            <button
-                                type="submit"
-                                className={cn(
-                                    "flex-shrink-0 px-4 sm:px-6 py-2 rounded-full text-sm font-medium",
-                                    "bg-primary text-primary-foreground hover:bg-primary/90",
-                                    "transition-all duration-200"
-                                )}
-                            >
-                                <Search className="h-4 w-4 sm:hidden" />
-                                <span className="hidden sm:inline">Rechercher</span>
-                            </button>
                         </div>
                     </div>
 
