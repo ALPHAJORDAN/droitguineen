@@ -1,8 +1,26 @@
 import { Router, Request, Response } from 'express';
-import { searchTextes, searchArticles } from '../lib/meilisearch';
+import { searchTextes, searchArticles, searchSuggestions } from '../lib/meilisearch';
 import { asyncHandler } from '../middlewares/error.middleware';
 
 const router = Router();
+
+// GET /recherche/suggestions - Smart autocomplete suggestions
+router.get('/suggestions', asyncHandler(async (req: Request, res: Response) => {
+    const { q = '', limit = '6' } = req.query;
+    const limitNum = Math.min(Math.max(1, parseInt(limit as string, 10) || 6), 10);
+
+    if (!q || (q as string).trim().length < 2) {
+        return res.json({ query: q, hits: [], processingTimeMs: 0 });
+    }
+
+    const result = await searchSuggestions(q as string, limitNum);
+
+    res.json({
+        query: q,
+        hits: result.hits,
+        processingTimeMs: result.processingTimeMs,
+    });
+}));
 
 // GET /recherche - Recherche full-text via Meilisearch (textes + articles)
 router.get('/', asyncHandler(async (req: Request, res: Response) => {

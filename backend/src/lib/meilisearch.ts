@@ -163,6 +163,7 @@ async function initArticlesIndex(): Promise<Index> {
         'texteEtat',
         'texteDatePublication',
         'etat',
+        'numero',
     ]);
 
     await articlesIndex.updateSortableAttributes([
@@ -358,6 +359,118 @@ export async function searchArticles(
         hits: result.hits,
         estimatedTotalHits: result.estimatedTotalHits || 0,
         processingTimeMs: result.processingTimeMs,
+    };
+}
+
+// Smart suggestion search: detects article number patterns for targeted results
+export async function searchSuggestions(
+    query: string,
+    limit: number = 6,
+): Promise<{
+    hits: unknown[];
+    processingTimeMs: number;
+}> {
+    const trimmed = query.trim();
+
+    // Detect patterns like "article 45 du code civil", "art. 12 code pénal", "article premier"
+    const articlePattern = /^(?:art(?:icle)?\.?\s+)(\d+|premier|1er)\s*(?:du|de\s+la|de\s+l'|de|des|d')?\s*(.*)$/i;
+    const match = trimmed.match(articlePattern);
+
+    if (match) {
+        // User is searching for a specific article of a specific text
+        const articleNum = match[1].toLowerCase() === 'premier' ? '1er'
+            : match[1].toLowerCase() === '1er' ? '1er'
+            : match[1];
+        const textQuery = match[2]?.trim() || '';
+
+        // Search articles with numero filter + text name query
+        const articleFilter = `numero = "${sanitizeFilterValue(articleNum)}"`;
+
+        const [targeted, fallback] = await Promise.all([
+            // Targeted: exact article number + text name search
+            meiliClient.index(ARTICLES_INDEX_NAME).search(textQuery || trimmed, {
+                filter: articleFilter,
+                limit: limit,
+                attributesToHighlight: ['contenu'],
+                highlightPreTag: '<mark>',
+                highlightPostTag: '</mark>',
+                attributesToCrop: ['contenu'],
+                cropLength: 150,
+                matchingStrategy: 'last',
+                showRankingScore: true,
+            }),
+            // Fallback: also search textes by text name (e.g., "code civil")
+            textQuery
+                ? meiliClient.index(TEXTES_INDEX_NAME).search(textQuery, {
+                    limit: 3,
+                    matchingStrategy: 'last',
+                    showRankingScore: true,
+                })
+                : Promise.resolve({ hits: [], processingTimeMs: 0 }),
+        ]);
+
+        const articleHits = targeted.hits.map((hit: any) => ({
+            ...hit,
+            type: 'article',
+            _rankingScore: (hit._rankingScore ?? 0) + 0.1, // Boost targeted articles
+        }));
+
+        const texteHits = (fallback as any).hits.map((hit: any) => ({
+            ...hit,
+            type: 'texte',
+        }));
+
+        const allHits = [...articleHits, ...texteHits]
+            .sort((a: any, b: any) => (b._rankingScore ?? 0) - (a._rankingScore ?? 0))
+            .slice(0, limit);
+
+        return {
+            hits: allHits,
+            processingTimeMs: Math.max(targeted.processingTimeMs, (fallback as any).processingTimeMs || 0),
+        };
+    }
+
+    // Detect bare number pattern: "45", "12" → likely searching for an article
+    const bareNumberPattern = /^(\d+)$/;
+    const bareMatch = trimmed.match(bareNumberPattern);
+
+    if (bareMatch) {
+        const articleNum = bareMatch[1];
+        const articleFilter = `numero = "${sanitizeFilterValue(articleNum)}"`;
+
+        const result = await meiliClient.index(ARTICLES_INDEX_NAME).search('', {
+            filter: articleFilter,
+            limit: limit,
+            attributesToHighlight: ['contenu'],
+            highlightPreTag: '<mark>',
+            highlightPostTag: '</mark>',
+            attributesToCrop: ['contenu'],
+            cropLength: 150,
+            showRankingScore: true,
+        });
+
+        return {
+            hits: result.hits.map((hit: any) => ({ ...hit, type: 'article' })),
+            processingTimeMs: result.processingTimeMs,
+        };
+    }
+
+    // No article pattern detected → standard dual-index search
+    const [textesResult, articlesResult] = await Promise.all([
+        searchTextes(query, { limit: Math.ceil(limit / 2) }),
+        searchArticles(query, { limit: Math.ceil(limit / 2) }),
+    ]);
+
+    const texteHits = textesResult.hits.map((hit: any) => ({ ...hit, type: 'texte' }));
+    const articleHits = articlesResult.hits.map((hit: any) => ({ ...hit, type: 'article' }));
+
+    const allHits = [...texteHits, ...articleHits]
+        .sort((a: any, b: any) => (b._rankingScore ?? 0) - (a._rankingScore ?? 0))
+        .slice(0, limit);
+
+    return {
+        hits: allHits,
+        processingTimeMs: Math.max(textesResult.processingTimeMs, articlesResult.processingTimeMs),
     };
 }
 

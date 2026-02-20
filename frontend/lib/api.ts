@@ -292,8 +292,8 @@ export async function searchTextes(query: string, options?: {
 }
 
 export async function searchSuggestions(query: string): Promise<SearchResponse> {
-    const params = new URLSearchParams({ q: query, limit: '5' });
-    const res = await fetch(`${API_BASE_URL}/recherche?${params.toString()}`);
+    const params = new URLSearchParams({ q: query, limit: '6' });
+    const res = await fetch(`${API_BASE_URL}/recherche/suggestions?${params.toString()}`);
     if (!res.ok) throw new Error('Failed to fetch suggestions');
     return res.json();
 }

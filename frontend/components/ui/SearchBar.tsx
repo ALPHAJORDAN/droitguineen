@@ -224,27 +224,64 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                                 </div>
                             ) : (
                                 <>
-                                    {suggestions.map((hit, index) => (
-                                        <button
-                                            key={`${hit.type}-${hit.id}`}
-                                            className={cn(
-                                                "w-full text-left px-4 py-3 flex items-start gap-3",
-                                                "hover:bg-accent/50 transition-colors border-b border-border/30 last:border-b-0",
-                                                selectedIndex === index && "bg-accent/50"
-                                            )}
-                                            onMouseEnter={() => setSelectedIndex(index)}
-                                            onMouseDown={(e) => {
-                                                e.preventDefault();
-                                                navigateToHit(hit);
-                                            }}
-                                        >
-                                            {hit.type === "article" ? (
-                                                <SuggestionArticle article={hit as ArticleHit} />
-                                            ) : (
-                                                <SuggestionTexte texte={hit as Texte & { type: "texte" }} />
-                                            )}
-                                        </button>
-                                    ))}
+                                    {(() => {
+                                        const articles = suggestions.filter(h => h.type === "article");
+                                        const textes = suggestions.filter(h => h.type === "texte");
+                                        let flatIndex = 0;
+                                        const items: React.ReactNode[] = [];
+
+                                        if (articles.length > 0) {
+                                            items.push(
+                                                <div key="label-articles" className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                                                    Articles
+                                                </div>
+                                            );
+                                            for (const hit of articles) {
+                                                const idx = flatIndex++;
+                                                items.push(
+                                                    <button
+                                                        key={`article-${hit.id}`}
+                                                        className={cn(
+                                                            "w-full text-left px-4 py-2.5 flex items-start gap-3",
+                                                            "hover:bg-accent/50 transition-colors",
+                                                            selectedIndex === idx && "bg-accent/50"
+                                                        )}
+                                                        onMouseEnter={() => setSelectedIndex(idx)}
+                                                        onMouseDown={(e) => { e.preventDefault(); navigateToHit(hit); }}
+                                                    >
+                                                        <SuggestionArticle article={hit as ArticleHit} />
+                                                    </button>
+                                                );
+                                            }
+                                        }
+
+                                        if (textes.length > 0) {
+                                            items.push(
+                                                <div key="label-textes" className="px-4 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground/70 border-t border-border/30">
+                                                    Textes juridiques
+                                                </div>
+                                            );
+                                            for (const hit of textes) {
+                                                const idx = flatIndex++;
+                                                items.push(
+                                                    <button
+                                                        key={`texte-${hit.id}`}
+                                                        className={cn(
+                                                            "w-full text-left px-4 py-2.5 flex items-start gap-3",
+                                                            "hover:bg-accent/50 transition-colors",
+                                                            selectedIndex === idx && "bg-accent/50"
+                                                        )}
+                                                        onMouseEnter={() => setSelectedIndex(idx)}
+                                                        onMouseDown={(e) => { e.preventDefault(); navigateToHit(hit); }}
+                                                    >
+                                                        <SuggestionTexte texte={hit as Texte & { type: "texte" }} />
+                                                    </button>
+                                                );
+                                            }
+                                        }
+
+                                        return items;
+                                    })()}
                                     <button
                                         onMouseDown={(e) => {
                                             e.preventDefault();
