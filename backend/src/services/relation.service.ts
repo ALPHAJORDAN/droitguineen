@@ -1,5 +1,5 @@
 import prisma from '../lib/prisma';
-import { TypeRelation, EtatTexte } from '@prisma/client';
+import { TypeRelation, EtatTexte, Prisma } from '@prisma/client';
 import { AppError } from '../middlewares/error.middleware';
 import { log } from '../utils/logger';
 
@@ -218,25 +218,29 @@ class RelationService {
       throw new AppError(404, 'Relation non trouvée');
     }
 
-    const relation = await prisma.texteRelation.update({
-      where: { id },
-      data: {
-        type: data.type,
-        articleCibleNum: data.articleCibleNum,
-        articleSourceNum: data.articleSourceNum,
-        description: data.description,
-        dateEffet: data.dateEffet ? new Date(data.dateEffet) : undefined,
-      },
-      include: {
-        texteSource: { select: { id: true, titre: true } },
-        texteCible: { select: { id: true, titre: true } },
-      },
-    });
+    const relation = await prisma.$transaction(async (tx) => {
+      const updated = await tx.texteRelation.update({
+        where: { id },
+        data: {
+          type: data.type,
+          articleCibleNum: data.articleCibleNum,
+          articleSourceNum: data.articleSourceNum,
+          description: data.description,
+          dateEffet: data.dateEffet ? new Date(data.dateEffet) : undefined,
+        },
+        include: {
+          texteSource: { select: { id: true, titre: true } },
+          texteCible: { select: { id: true, titre: true } },
+        },
+      });
 
-    // If the relation type changed, recalculate the target texte's state
-    if (data.type && data.type !== oldRelation.type) {
-      await this.recalculateTexteState(oldRelation.texteCibleId);
-    }
+      // If the relation type changed, recalculate the target texte's state
+      if (data.type && data.type !== oldRelation.type) {
+        await this.recalculateTexteState(oldRelation.texteCibleId, tx);
+      }
+
+      return updated;
+    });
 
     log.info('Relation updated', { id });
 
@@ -252,10 +256,12 @@ class RelationService {
       throw new AppError(404, 'Relation non trouvée');
     }
 
-    await prisma.texteRelation.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.texteRelation.delete({ where: { id } });
 
-    // Recalculate the target texte's state after removing the relation
-    await this.recalculateTexteState(relation.texteCibleId);
+      // Recalculate the target texte's state after removing the relation
+      await this.recalculateTexteState(relation.texteCibleId, tx);
+    });
 
     log.info('Relation deleted', { id });
   }
@@ -263,8 +269,11 @@ class RelationService {
   /**
    * Recalculate a texte's state based on its remaining incoming relations
    */
-  private async recalculateTexteState(texteId: string): Promise<void> {
-    const incomingRelations = await prisma.texteRelation.findMany({
+  private async recalculateTexteState(
+    texteId: string,
+    tx: Prisma.TransactionClient = prisma,
+  ): Promise<void> {
+    const incomingRelations = await tx.texteRelation.findMany({
       where: { texteCibleId: texteId },
       select: { type: true },
     });
@@ -280,7 +289,7 @@ class RelationService {
       newEtat = EtatTexte.VIGUEUR;
     }
 
-    await prisma.texte.update({
+    await tx.texte.update({
       where: { id: texteId },
       data: {
         etat: newEtat,

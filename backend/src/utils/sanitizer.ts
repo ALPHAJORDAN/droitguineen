@@ -1,5 +1,8 @@
+import path from 'path';
 import xss, { IFilterXSSOptions } from 'xss';
 import validator from 'validator';
+import { config } from '../config';
+import { AppError } from '../middlewares/error.middleware';
 
 // XSS options - strip all HTML tags
 const xssOptions: IFilterXSSOptions = {
@@ -22,6 +25,19 @@ export function sanitizeHtml(input: string): string {
 export function sanitizeString(input: string): string {
   if (typeof input !== 'string') return '';
   return validator.escape(validator.trim(input));
+}
+
+/**
+ * Validate that a file path is within the configured upload directory.
+ * Throws AppError(400) if the path escapes the upload directory (path traversal).
+ */
+export function validateUploadPath(filePath: string): string {
+  const uploadDir = path.resolve(config.uploadDir);
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(uploadDir + path.sep) && resolved !== uploadDir) {
+    throw new AppError(400, 'Chemin de fichier invalide');
+  }
+  return resolved;
 }
 
 /**

@@ -5,6 +5,7 @@ import { Nature, EtatTexte } from '@prisma/client';
 import { AppError } from '../middlewares/error.middleware';
 import { log } from '../utils/logger';
 import { cleanupOnError } from '../middlewares/upload.middleware';
+import { validateUploadPath } from '../utils/sanitizer';
 import {
   extractTextFromPdf as pipelineExtractText,
   cleanText,
@@ -288,6 +289,11 @@ class UploadService {
       visas,
     } = options;
 
+    // Validate file path is within upload directory
+    if (filePath) {
+      validateUploadPath(filePath);
+    }
+
     try {
       const texte = await prisma.texte.create({
         data: {
@@ -398,6 +404,7 @@ class UploadService {
     // Delete PDF file from disk if present
     if (texte.fichierPdf && fs.existsSync(texte.fichierPdf)) {
       try {
+        validateUploadPath(texte.fichierPdf);
         fs.unlinkSync(texte.fichierPdf);
         log.info('File deleted', { filePath: texte.fichierPdf });
       } catch (fileError) {

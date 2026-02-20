@@ -97,8 +97,20 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
     // Scroll to specific article when navigating from search results
     useEffect(() => {
         if (!articleParam || !texte?.articles?.length) return;
+
+        let aborted = false;
+        let unlockTimer: ReturnType<typeof setTimeout>;
+        let flashTimer: ReturnType<typeof setTimeout>;
+
+        const unlockOnScroll = () => {
+            scrollingToArticle.current = false;
+            window.removeEventListener('wheel', unlockOnScroll);
+            window.removeEventListener('touchmove', unlockOnScroll);
+        };
+
         // Delay to ensure DOM is rendered
         const timer = setTimeout(() => {
+            if (aborted) return;
             const el = document.getElementById(`article-${articleParam}`);
             if (el) {
                 // Suspend IntersectionObserver during programmatic scroll
@@ -110,21 +122,27 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                 setActiveArticle(`article-${articleParam}`);
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 el.classList.add('article-flash');
-                setTimeout(() => el.classList.remove('article-flash'), 1500);
+                flashTimer = setTimeout(() => el.classList.remove('article-flash'), 1500);
                 // Re-enable observer only when user scrolls manually
-                const unlockOnScroll = () => {
-                    scrollingToArticle.current = false;
-                    window.removeEventListener('wheel', unlockOnScroll);
-                    window.removeEventListener('touchmove', unlockOnScroll);
-                };
                 // Wait for programmatic scroll to finish before listening
-                setTimeout(() => {
-                    window.addEventListener('wheel', unlockOnScroll, { once: true });
-                    window.addEventListener('touchmove', unlockOnScroll, { once: true });
+                unlockTimer = setTimeout(() => {
+                    if (aborted) return;
+                    window.addEventListener('wheel', unlockOnScroll, { once: true, passive: true });
+                    window.addEventListener('touchmove', unlockOnScroll, { once: true, passive: true });
                 }, 1200);
             }
         }, 300);
-        return () => clearTimeout(timer);
+
+        return () => {
+            aborted = true;
+            clearTimeout(timer);
+            clearTimeout(unlockTimer);
+            clearTimeout(flashTimer);
+            // Clean up any lingering listeners
+            window.removeEventListener('wheel', unlockOnScroll);
+            window.removeEventListener('touchmove', unlockOnScroll);
+            scrollingToArticle.current = false;
+        };
     }, [articleParam, texte?.articles]);
 
     const handleExport = (format: 'pdf' | 'docx' | 'json' | 'html') => {

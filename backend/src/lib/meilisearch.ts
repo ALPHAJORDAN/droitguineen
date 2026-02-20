@@ -255,7 +255,7 @@ export async function removeTexteFromIndex(texteId: string): Promise<void> {
 export async function removeArticlesFromIndex(texteId: string): Promise<void> {
     // Meilisearch supports delete by filter
     await meiliClient.index(ARTICLES_INDEX_NAME).deleteDocuments({
-        filter: `texteId = "${texteId}"`,
+        filter: `texteId = "${sanitizeFilterValue(texteId)}"`,
     });
 }
 

@@ -18,6 +18,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useSearch, useLois } from "@/lib/hooks";
 import { NATURE_LABELS, ETAT_LABELS, Texte, ArticleHit, SearchHit } from "@/lib/api";
 import { formatDate, ETAT_STYLES } from "@/lib/utils";
+import DOMPurify from "isomorphic-dompurify";
+import {
+    Sheet, SheetContent, SheetHeader, SheetTitle,
+} from "@/components/ui/Sheet";
 
 // Map frontend type filters to backend nature values
 const TYPE_TO_NATURE: Record<string, string> = {
@@ -73,9 +77,9 @@ function useSearchFilters() {
     };
 }
 
-/** Strip all HTML tags except <mark> to prevent XSS from Meilisearch content */
+/** Sanitize highlighted HTML from Meilisearch, only allowing <mark> tags */
 function sanitizeHighlight(html: string): string {
-    return html.replace(/<\/?(?!mark\b)[^>]+>/gi, '');
+    return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['mark'] });
 }
 
 function ArticleCard({ article }: { article: ArticleHit }) {
@@ -404,6 +408,25 @@ function SearchFilters() {
                 </div>
             </aside>
 
+            {/* Mobile filter sheet (Radix Dialog — focus trap, Escape, aria-modal, scroll lock) */}
+            <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
+                <SheetContent side="bottom" className="md:hidden rounded-t-2xl max-h-[80vh] flex flex-col" hideDefaultClose>
+                    <SheetHeader className="flex-row items-center justify-between space-y-0 pb-4 border-b">
+                        <SheetTitle className="flex items-center gap-2">
+                            <Filter className="h-5 w-5" />
+                            Filtres
+                        </SheetTitle>
+                        <button onClick={() => setShowMobileFilters(false)} className="text-muted-foreground hover:text-foreground">
+                            <X className="h-5 w-5" />
+                            <span className="sr-only">Fermer</span>
+                        </button>
+                    </SheetHeader>
+                    <div className="overflow-y-auto flex-1 pt-4">
+                        {filterContent}
+                    </div>
+                </SheetContent>
+            </Sheet>
+
             {/* Mobile filter button */}
             <button
                 onClick={() => setShowMobileFilters(true)}
@@ -412,27 +435,6 @@ function SearchFilters() {
             >
                 <SlidersHorizontal className="h-5 w-5" />
             </button>
-
-            {/* Mobile filter sheet */}
-            {showMobileFilters && (
-                <div className="md:hidden fixed inset-0 z-50">
-                    <div className="absolute inset-0 bg-black/50" onClick={() => setShowMobileFilters(false)} />
-                    <div className="absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl max-h-[80vh] flex flex-col animate-in slide-in-from-bottom duration-200">
-                        <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
-                            <h2 className="font-semibold flex items-center gap-2">
-                                <Filter className="h-5 w-5" />
-                                Filtres
-                            </h2>
-                            <button onClick={() => setShowMobileFilters(false)} className="text-muted-foreground hover:text-foreground">
-                                <X className="h-5 w-5" />
-                            </button>
-                        </div>
-                        <div className="p-4 overflow-y-auto flex-1">
-                            {filterContent}
-                        </div>
-                    </div>
-                </div>
-            )}
         </>
     );
 }

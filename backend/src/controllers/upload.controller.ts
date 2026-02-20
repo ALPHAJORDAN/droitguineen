@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { uploadService } from '../services/upload.service';
 import { asyncHandler, AppError } from '../middlewares/error.middleware';
 import { cleanupOnError } from '../middlewares/upload.middleware';
+import { validateUploadPath } from '../utils/sanitizer';
 import { Nature } from '@prisma/client';
 
 class UploadController {
@@ -129,6 +130,9 @@ class UploadController {
       articles = [],
       sections = [],
     } = req.body;
+
+    // Validate file path is within upload directory (prevent path traversal)
+    validateUploadPath(filePath);
 
     const texte = await uploadService.createTexteFromPdf({
       cid,

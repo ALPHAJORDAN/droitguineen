@@ -97,7 +97,7 @@ router.get('/pdf/:id', asyncHandler(async (req: Request, res: Response) => {
         includeHeader: includeHeader === 'true',
         includeFooter: includeFooter === 'true',
         includePageNumbers: includePageNumbers === 'true',
-        watermark: watermark as string | undefined
+        watermark: typeof watermark === 'string' ? watermark.slice(0, 100) : undefined
     };
 
     const texte = await loadTexteForExport(id, {
