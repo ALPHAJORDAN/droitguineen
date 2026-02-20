@@ -120,8 +120,17 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 el.classList.add('article-flash');
                 setTimeout(() => el.classList.remove('article-flash'), 1500);
-                // Re-enable observer after scroll animation completes
-                setTimeout(() => { scrollingToArticle.current = false; }, 1200);
+                // Re-enable observer only when user scrolls manually
+                const unlockOnScroll = () => {
+                    scrollingToArticle.current = false;
+                    window.removeEventListener('wheel', unlockOnScroll);
+                    window.removeEventListener('touchmove', unlockOnScroll);
+                };
+                // Wait for programmatic scroll to finish before listening
+                setTimeout(() => {
+                    window.addEventListener('wheel', unlockOnScroll, { once: true });
+                    window.addEventListener('touchmove', unlockOnScroll, { once: true });
+                }, 1200);
             }
         }, 300);
         return () => clearTimeout(timer);
