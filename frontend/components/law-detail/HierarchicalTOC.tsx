@@ -1,9 +1,17 @@
 "use client";
 
 import { Section, Article } from "@/lib/api";
-import { ChevronRight, List, X, FileText } from "lucide-react";
+import { ChevronRight, List, FileText } from "lucide-react";
 import { useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
+import {
+    Sheet,
+    SheetContent,
+    SheetTrigger,
+    SheetTitle,
+    SheetDescription,
+} from "@/components/ui/Sheet";
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 interface HierarchicalTOCProps {
     sections?: Section[];
@@ -39,30 +47,27 @@ export function HierarchicalTOC({ sections, articles = [], activeArticle }: Hier
                 </div>
             </aside>
 
-            {/* Mobile floating button */}
+            {/* Mobile floating button + Sheet */}
             {(hasSections || articles.length > 0) && (
-                <button
-                    onClick={() => setMobileOpen(true)}
-                    className="lg:hidden fixed bottom-6 right-6 z-40 bg-primary text-primary-foreground rounded-full p-3 shadow-lg hover:opacity-90 transition-opacity"
-                    aria-label="Table des matieres"
-                >
-                    <List className="h-5 w-5" />
-                </button>
-            )}
-
-            {/* Mobile sheet */}
-            {mobileOpen && (
-                <div className="lg:hidden fixed inset-0 z-50">
-                    <div className="absolute inset-0 bg-black/50" onClick={closeMobile} />
-                    <div className="absolute bottom-0 left-0 right-0 bg-background rounded-t-2xl max-h-[70vh] flex flex-col animate-in slide-in-from-bottom duration-200">
-                        <div className="p-4 border-b flex items-center justify-between flex-shrink-0">
+                <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+                    <SheetTrigger asChild>
+                        <button
+                            className="lg:hidden fixed bottom-6 right-6 z-40 bg-primary text-primary-foreground rounded-full p-3 shadow-lg hover:opacity-90 transition-opacity"
+                            aria-label="Table des matieres"
+                        >
+                            <List className="h-5 w-5" />
+                        </button>
+                    </SheetTrigger>
+                    <SheetContent side="bottom" className="rounded-t-2xl max-h-[70vh] flex flex-col p-0 lg:hidden">
+                        <VisuallyHidden>
+                            <SheetTitle>Table des matieres</SheetTitle>
+                            <SheetDescription>Navigation dans le document</SheetDescription>
+                        </VisuallyHidden>
+                        <div className="p-4 border-b flex items-center flex-shrink-0">
                             <h2 className="font-semibold text-sm flex items-center">
                                 <FileText className="mr-2 h-4 w-4 text-primary" />
                                 Table des matieres
                             </h2>
-                            <button onClick={closeMobile} className="text-muted-foreground hover:text-foreground">
-                                <X className="h-5 w-5" />
-                            </button>
                         </div>
                         <nav className="p-3 overflow-y-auto flex-1">
                             {hasSections ? (
@@ -71,8 +76,8 @@ export function HierarchicalTOC({ sections, articles = [], activeArticle }: Hier
                                 <FlatArticleList articles={articles} activeArticle={activeArticle} onNavigate={closeMobile} />
                             )}
                         </nav>
-                    </div>
-                </div>
+                    </SheetContent>
+                </Sheet>
             )}
         </>
     );
@@ -165,9 +170,9 @@ function SectionNode({
 
     // Find first article in this section for scroll target
     const firstArticle = hasArticles
-        ? section.articles![0]
+        ? section.articles?.[0] ?? null
         : hasChildren
-            ? findFirstArticle(section.enfants!)
+            ? findFirstArticle(section.enfants ?? [])
             : null;
 
     const handleClick = () => {
@@ -218,7 +223,7 @@ function SectionNode({
 
             {expanded && hasChildren && (
                 <SectionTree
-                    sections={section.enfants!}
+                    sections={section.enfants ?? []}
                     activeArticle={activeArticle}
                     onNavigate={onNavigate}
                     level={level + 1}
@@ -227,7 +232,7 @@ function SectionNode({
 
             {expanded && hasArticles && !hasChildren && (
                 <div className="ml-6 space-y-0.5">
-                    {section.articles!.map((article) => (
+                    {(section.articles ?? []).map((article) => (
                         <button
                             key={article.id}
                             data-toc-target={`article-${article.numero}`}

@@ -54,8 +54,8 @@ function LoginPageContent() {
         try {
             await login(email, password);
             router.push(redirect);
-        } catch (err: any) {
-            setError(err.message || "Échec de la connexion");
+        } catch (err: unknown) {
+            setError(err instanceof Error ? err.message : "Échec de la connexion");
         } finally {
             setIsSubmitting(false);
         }

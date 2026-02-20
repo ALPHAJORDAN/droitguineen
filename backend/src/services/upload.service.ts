@@ -345,7 +345,7 @@ class UploadService {
           await indexTexte(texteComplete);
           await indexArticles(texteComplete);
         } catch (e) {
-          log.warn('Meilisearch indexing failed', { texteId: texte.id, error: e });
+          log.error('Meilisearch indexing failed — texte saved but not searchable', { texteId: texte.id, error: e });
         }
       }
 

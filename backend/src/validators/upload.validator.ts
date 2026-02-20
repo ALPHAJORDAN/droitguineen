@@ -26,12 +26,17 @@ const articleSchema = z.object({
   etat: EtatTexteEnum.optional(),
 });
 
-// Recursive section schema
-const sectionSchema: z.ZodType<any> = z.lazy(() => z.object({
-  titre: z.string().min(1).max(500),
-  articles: z.array(articleSchema).default([]),
-  enfants: z.array(sectionSchema).default([]),
-}));
+// Recursive section schema with max depth of 6 to prevent DoS
+function createSectionSchema(depth: number = 0): z.ZodType<any> {
+  return z.object({
+    titre: z.string().min(1).max(500),
+    articles: z.array(articleSchema).default([]),
+    enfants: depth < 6
+      ? z.lazy(() => z.array(createSectionSchema(depth + 1))).default([])
+      : z.array(z.never()).max(0).default([]),
+  });
+}
+const sectionSchema = createSectionSchema();
 
 // Confirm upload schema - validates the full body for /upload/confirm
 export const confirmUploadSchema = z.object({

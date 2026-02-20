@@ -9,24 +9,32 @@ import { asyncHandler, AppError } from '../middlewares/error.middleware';
 
 const router = Router();
 
-/** In-memory cache for export data (TTL: 5 minutes) */
+/** In-memory cache for export data (TTL: 5 minutes, max 50 entries) */
+const MAX_CACHE_SIZE = 50;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const exportCache = new Map<string, { data: any; timestamp: number }>();
 const CACHE_TTL = 5 * 60 * 1000;
 
 async function loadTexteForExport(id: string, include: object) {
+    const now = Date.now();
     const cached = exportCache.get(id);
-    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    if (cached && now - cached.timestamp < CACHE_TTL) {
         return cached.data;
     }
 
     const texte = await prisma.texte.findUnique({ where: { id }, include });
     if (texte) {
-        exportCache.set(id, { data: texte, timestamp: Date.now() });
-        // Evict old entries if cache grows too large
-        if (exportCache.size > 50) {
-            const oldest = [...exportCache.entries()]
-                .sort((a, b) => a[1].timestamp - b[1].timestamp)[0];
-            if (oldest) exportCache.delete(oldest[0]);
+        exportCache.set(id, { data: texte, timestamp: now });
+        // LRU-style eviction: remove expired entries first, then oldest if still over limit
+        if (exportCache.size > MAX_CACHE_SIZE) {
+            for (const [key, val] of exportCache) {
+                if (now - val.timestamp > CACHE_TTL) exportCache.delete(key);
+            }
+            while (exportCache.size > MAX_CACHE_SIZE) {
+                const firstKey = exportCache.keys().next().value;
+                if (firstKey !== undefined) exportCache.delete(firstKey);
+                else break;
+            }
         }
     }
     return texte;
@@ -226,12 +234,12 @@ router.get('/json/:id', asyncHandler(async (req: Request, res: Response) => {
         structure: texte.sections.length > 0 ? texte.sections : undefined,
         articles: texte.articles.length > 0 ? texte.articles : undefined,
         relations: {
-            modifie: texte.relationsSource.filter((r: any) => r.type === 'MODIFIE'),
-            abroge: texte.relationsSource.filter((r: any) => r.type === 'ABROGE'),
-            cite: texte.relationsSource.filter((r: any) => r.type === 'CITE'),
-            modifiePar: texte.relationsCible.filter((r: any) => r.type === 'MODIFIE'),
-            abrogePar: texte.relationsCible.filter((r: any) => r.type === 'ABROGE'),
-            citePar: texte.relationsCible.filter((r: any) => r.type === 'CITE')
+            modifie: texte.relationsSource.filter((r: { type: string }) => r.type === 'MODIFIE'),
+            abroge: texte.relationsSource.filter((r: { type: string }) => r.type === 'ABROGE'),
+            cite: texte.relationsSource.filter((r: { type: string }) => r.type === 'CITE'),
+            modifiePar: texte.relationsCible.filter((r: { type: string }) => r.type === 'MODIFIE'),
+            abrogePar: texte.relationsCible.filter((r: { type: string }) => r.type === 'ABROGE'),
+            citePar: texte.relationsCible.filter((r: { type: string }) => r.type === 'CITE')
         },
         exportedAt: new Date().toISOString(),
         source: 'Droitguinéen'

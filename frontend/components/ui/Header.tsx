@@ -109,6 +109,7 @@ function HeaderContent() {
                         width={32}
                         height={32}
                         className="object-contain"
+                        priority
                     />
                     <span className="font-semibold text-lg hidden sm:inline-block">Droitguinéen</span>
                 </Link>

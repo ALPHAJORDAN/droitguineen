@@ -81,7 +81,13 @@ class LoisController {
     const { id } = req.params;
     const data = req.body as UpdateLoiInput;
 
-    const texte = await texteService.update(id, data as any);
+    const { dateSignature, datePublication, dateEntreeVigueur, ...rest } = data;
+    const texte = await texteService.update(id, {
+      ...rest,
+      dateSignature: dateSignature !== undefined ? (dateSignature ? new Date(dateSignature) : null) : undefined,
+      datePublication: datePublication !== undefined ? (datePublication ? new Date(datePublication) : null) : undefined,
+      dateEntreeVigueur: dateEntreeVigueur !== undefined ? (dateEntreeVigueur ? new Date(dateEntreeVigueur) : null) : undefined,
+    });
 
     res.json({
       success: true,

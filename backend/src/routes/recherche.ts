@@ -72,19 +72,21 @@ router.get('/', asyncHandler(async (req: Request, res: Response) => {
     ]);
 
     // Tag results with their type
-    const texteHits = textesResult.hits.map((hit: any) => ({
+    type ScoredHit = Record<string, unknown> & { type: string; _rankingScore?: number };
+
+    const texteHits: ScoredHit[] = (textesResult.hits as Record<string, unknown>[]).map((hit) => ({
         ...hit,
         type: 'texte',
     }));
 
-    const articleHits = articlesResult.hits.map((hit: any) => ({
+    const articleHits: ScoredHit[] = (articlesResult.hits as Record<string, unknown>[]).map((hit) => ({
         ...hit,
         type: 'article',
     }));
 
     // Merge by ranking score (descending) for relevance-based ordering
     const allHits = [...texteHits, ...articleHits]
-        .sort((a: any, b: any) => (b._rankingScore ?? 0) - (a._rankingScore ?? 0))
+        .sort((a, b) => (b._rankingScore ?? 0) - (a._rankingScore ?? 0))
         .slice(0, limitNum);
 
     const totalEstimated = textesResult.estimatedTotalHits + articlesResult.estimatedTotalHits;
