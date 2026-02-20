@@ -387,8 +387,8 @@ export async function searchSuggestions(
         const articleFilter = `numero = "${sanitizeFilterValue(articleNum)}"`;
 
         const [targeted, fallback] = await Promise.all([
-            // Targeted: exact article number + text name search
-            meiliClient.index(ARTICLES_INDEX_NAME).search(textQuery || trimmed, {
+            // Targeted: exact article number + text name search (empty query when no text name)
+            meiliClient.index(ARTICLES_INDEX_NAME).search(textQuery, {
                 filter: articleFilter,
                 limit: limit,
                 attributesToHighlight: ['contenu'],
