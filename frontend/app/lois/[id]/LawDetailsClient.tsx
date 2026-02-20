@@ -48,6 +48,7 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
     const [searchQuery, setSearchQuery] = useState("");
     const [editingId, setEditingId] = useState<string | null>(null);
     const exportMenuRef = useRef<HTMLDivElement>(null);
+    const scrollingToArticle = useRef(false);
 
     const isAdmin = user?.role === "ADMIN" || user?.role === "EDITOR";
     const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -72,6 +73,8 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
 
         const observer = new IntersectionObserver(
             (entries) => {
+                // Skip observer updates while programmatic scroll is in progress
+                if (scrollingToArticle.current) return;
                 for (const entry of entries) {
                     if (entry.isIntersecting) {
                         // Direct DOM manipulation to avoid re-rendering all articles
@@ -107,9 +110,18 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
         const timer = setTimeout(() => {
             const el = document.getElementById(`article-${articleParam}`);
             if (el) {
+                // Suspend IntersectionObserver during programmatic scroll
+                scrollingToArticle.current = true;
+                // Clear any existing active state
+                document.querySelector('.article-active')?.classList.remove('article-active');
+                // Mark the target article as active
+                el.classList.add('article-active');
+                setActiveArticle(`article-${articleParam}`);
                 el.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 el.classList.add('article-flash');
                 setTimeout(() => el.classList.remove('article-flash'), 1500);
+                // Re-enable observer after scroll animation completes
+                setTimeout(() => { scrollingToArticle.current = false; }, 1200);
             }
         }, 300);
         return () => clearTimeout(timer);
