@@ -28,7 +28,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
                     size="sm"
                     disabled={currentPage <= 1}
                     onClick={() => handlePageChange(1)}
-                    title="Premiere page"
+                    aria-label="Premiere page"
                 >
                     <ChevronsLeft className="h-4 w-4" />
                 </Button>
@@ -60,7 +60,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
                     size="sm"
                     disabled={currentPage >= totalPages}
                     onClick={() => handlePageChange(totalPages)}
-                    title="Derniere page"
+                    aria-label="Derniere page"
                 >
                     <ChevronsRight className="h-4 w-4" />
                 </Button>

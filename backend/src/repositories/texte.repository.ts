@@ -183,23 +183,25 @@ class TexteRepository {
   }
 
   async getStats() {
-    const [total, enVigueur, byNature, recent] = await Promise.all([
-      prisma.texte.count(),
-      prisma.texte.count({ where: { etat: 'VIGUEUR' } }),
-      prisma.texte.groupBy({ by: ['nature'], _count: true }),
-      prisma.texte.findMany({
-        take: 6,
-        orderBy: { createdAt: 'desc' },
-        select: this.selectList,
-      }),
-    ]);
+    return prisma.$transaction(async (tx) => {
+      const [total, enVigueur, byNature, recent] = await Promise.all([
+        tx.texte.count(),
+        tx.texte.count({ where: { etat: 'VIGUEUR' } }),
+        tx.texte.groupBy({ by: ['nature'], _count: true }),
+        tx.texte.findMany({
+          take: 6,
+          orderBy: { createdAt: 'desc' },
+          select: this.selectList,
+        }),
+      ]);
 
-    const natureCounts: Record<string, number> = {};
-    for (const row of byNature) {
-      natureCounts[row.nature] = row._count;
-    }
+      const natureCounts: Record<string, number> = {};
+      for (const row of byNature) {
+        natureCounts[row.nature] = row._count;
+      }
 
-    return { total, enVigueur, natureCounts, recent };
+      return { total, enVigueur, natureCounts, recent };
+    });
   }
 
   async exists(id: string): Promise<boolean> {

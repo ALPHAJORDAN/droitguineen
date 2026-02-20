@@ -96,7 +96,7 @@ function FlatArticleList({
         e.preventDefault();
         const el = document.getElementById(`article-${articleNumero}`);
         if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             el.classList.add('article-flash');
             setTimeout(() => el.classList.remove('article-flash'), 1500);
         }
@@ -240,7 +240,7 @@ function SectionNode({
                                 e.stopPropagation();
                                 const el = document.getElementById(`article-${article.numero}`);
                                 if (el) {
-                                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                                     el.classList.add('article-flash');
                                     setTimeout(() => el.classList.remove('article-flash'), 1500);
                                 }

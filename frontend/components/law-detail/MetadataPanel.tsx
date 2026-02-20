@@ -14,7 +14,7 @@ function CopyableValue({ label, value }: { label: string; value: string }) {
     const handleCopy = () => {
         navigator.clipboard.writeText(value);
         setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
+        setTimeout(() => setCopied(false), 2500);
     };
 
     return (

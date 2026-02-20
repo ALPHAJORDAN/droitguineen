@@ -2,7 +2,7 @@
 
 import { Article } from "@/lib/api";
 import { ChevronRight, ChevronDown, ChevronUp, Link2 } from "lucide-react";
-import { useState, useMemo, useEffect, memo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, memo } from "react";
 import { Button } from "@/components/ui/Button";
 import { cn, ETAT_STYLES } from "@/lib/utils";
 
@@ -92,20 +92,24 @@ export function CodeViewer({ articles, fontSize = 'sm', searchQuery = '' }: Code
     // Gérer l'expansion
     const allSectionIds = useMemo(() => new Set(tree.map(s => s.id)), [tree]);
 
-    const toggleSection = (id: string) => {
+    const initializedRef = useRef(false);
+
+    const toggleSection = useCallback((id: string) => {
         setExpandedSections(prev => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id);
             else next.add(id);
             return next;
         });
-    };
+    }, []);
 
     const expandAll = () => setExpandedSections(new Set(allSectionIds));
     const collapseAll = () => setExpandedSections(new Set());
 
-    // Initialisation - expand top-level sections by default
+    // Initialisation - expand top-level sections by default (only once)
     useEffect(() => {
+        if (initializedRef.current || tree.length === 0) return;
+        initializedRef.current = true;
         const initial = new Set<string>();
         tree.forEach(s => {
             if (getLevelFromTitle(s.titre) <= 1) initial.add(s.id);

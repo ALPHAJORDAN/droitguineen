@@ -26,15 +26,23 @@ async function loadTexteForExport(id: string, include: object) {
     const texte = await prisma.texte.findUnique({ where: { id }, include });
     if (texte) {
         exportCache.set(id, { data: texte, timestamp: now });
-        // LRU-style eviction: remove expired entries first, then oldest if still over limit
+        // Eviction: remove expired entries first, then oldest (by insertion order) if still over limit
         if (exportCache.size > MAX_CACHE_SIZE) {
+            const expiredKeys: string[] = [];
             for (const [key, val] of exportCache) {
-                if (now - val.timestamp > CACHE_TTL) exportCache.delete(key);
+                if (now - val.timestamp > CACHE_TTL) expiredKeys.push(key);
             }
-            while (exportCache.size > MAX_CACHE_SIZE) {
-                const firstKey = exportCache.keys().next().value;
-                if (firstKey !== undefined) exportCache.delete(firstKey);
-                else break;
+            for (const key of expiredKeys) exportCache.delete(key);
+
+            // If still over limit, remove oldest entries
+            const overflow = exportCache.size - MAX_CACHE_SIZE;
+            if (overflow > 0) {
+                let removed = 0;
+                for (const key of exportCache.keys()) {
+                    if (removed >= overflow) break;
+                    exportCache.delete(key);
+                    removed++;
+                }
             }
         }
     }

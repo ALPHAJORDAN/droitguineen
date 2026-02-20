@@ -164,15 +164,15 @@ class TexteService {
       throw new AppError(404, 'Texte non trouvé');
     }
 
-    // Delete texte
+    // Delete texte from database (cascade deletes articles, sections, relations via Prisma schema)
     await texteRepository.delete(id);
 
-    // Remove from Meilisearch
+    // Remove from Meilisearch (best-effort with error logging)
     try {
       await removeTexteFromIndex(id);
       await removeArticlesFromIndex(id);
     } catch (error) {
-      log.warn('Failed to remove texte from Meilisearch', { texteId: id, error });
+      log.error('Failed to remove texte from Meilisearch — orphaned documents may exist in search index', { texteId: id, error });
     }
 
     log.info('Texte deleted', { texteId: id });

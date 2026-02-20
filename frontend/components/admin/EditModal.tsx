@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import * as Dialog from "@radix-ui/react-dialog";
 import { Button } from "@/components/ui/Button";
 import { useLoi, useUpdateLoi } from "@/lib/hooks";
 import { NATURE_LABELS, ETAT_LABELS } from "@/lib/api";
@@ -91,21 +92,26 @@ export function EditModal({ texteId, onClose }: EditModalProps) {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-background rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+        <Dialog.Root open onOpenChange={(open) => { if (!open) onClose(); }}>
+            <Dialog.Portal>
+                <Dialog.Overlay className="fixed inset-0 z-50 bg-black/50 animate-in fade-in duration-200" />
+                <Dialog.Content className="fixed inset-0 z-50 flex items-center justify-center p-4">
+                    <div className="bg-background rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
                 {/* Header */}
                 <div className="px-6 py-4 border-b bg-muted/30 flex items-center justify-between">
                     <div>
-                        <h2 className="text-lg font-semibold">Modifier le document</h2>
+                        <Dialog.Title className="text-lg font-semibold">Modifier le document</Dialog.Title>
                         {texte && (
-                            <p className="text-sm text-muted-foreground">
+                            <Dialog.Description className="text-sm text-muted-foreground">
                                 {NATURE_LABELS[texte.nature] || texte.nature} · {texte.cid}
-                            </p>
+                            </Dialog.Description>
                         )}
                     </div>
-                    <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-                        <X className="h-5 w-5" />
-                    </button>
+                    <Dialog.Close asChild>
+                        <button className="text-muted-foreground hover:text-foreground" aria-label="Fermer">
+                            <X className="h-5 w-5" />
+                        </button>
+                    </Dialog.Close>
                 </div>
 
                 {/* Content */}
@@ -268,7 +274,9 @@ export function EditModal({ texteId, onClose }: EditModalProps) {
                         Enregistrer
                     </Button>
                 </div>
-            </div>
-        </div>
+                    </div>
+                </Dialog.Content>
+            </Dialog.Portal>
+        </Dialog.Root>
     );
 }

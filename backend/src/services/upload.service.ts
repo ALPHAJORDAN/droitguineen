@@ -362,10 +362,13 @@ class UploadService {
   /**
    * Get list of uploaded files
    */
-  async getUploadedFiles(limit: number = 100) {
+  async getUploadedFiles(page: number = 1, limit: number = 50) {
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(Math.max(1, limit), 100);
     const textes = await prisma.texte.findMany({
       orderBy: { createdAt: 'desc' },
-      take: limit,
+      take: safeLimit,
+      skip: (safePage - 1) * safeLimit,
       select: {
         id: true,
         titre: true,

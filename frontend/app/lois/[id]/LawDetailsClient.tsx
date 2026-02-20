@@ -337,6 +337,8 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                         size="sm"
                                         onClick={() => setShowExportMenu(!showExportMenu)}
                                         disabled={exportMutation.isPending}
+                                        aria-haspopup="true"
+                                        aria-expanded={showExportMenu}
                                     >
                                         {exportMutation.isPending ? (
                                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

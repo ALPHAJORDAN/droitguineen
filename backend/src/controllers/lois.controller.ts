@@ -102,7 +102,7 @@ class LoisController {
     const { id } = req.params;
     await texteService.delete(id);
 
-    res.status(204).send();
+    res.json({ success: true, message: 'Texte supprimé' });
   });
 }
 

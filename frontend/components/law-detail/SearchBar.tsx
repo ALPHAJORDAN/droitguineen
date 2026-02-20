@@ -31,6 +31,7 @@ export function SearchBar({ onSearch, resultCount }: SearchBarProps) {
                 <input
                     type="text"
                     placeholder="Rechercher dans le texte..."
+                    aria-label="Rechercher dans le texte"
                     className="w-full border rounded-lg pl-9 pr-10 py-2 text-sm bg-background focus:ring-2 focus:ring-primary/20 focus:border-primary"
                     value={value}
                     onChange={(e) => setValue(e.target.value)}

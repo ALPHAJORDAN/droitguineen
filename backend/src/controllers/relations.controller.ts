@@ -68,7 +68,7 @@ class RelationsController {
     const { id } = req.params;
     await relationService.delete(id);
 
-    res.status(204).send();
+    res.json({ success: true, message: 'Relation supprimée' });
   });
 
   /**

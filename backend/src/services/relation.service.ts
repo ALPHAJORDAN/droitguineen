@@ -153,6 +153,11 @@ class RelationService {
    * Create a new relation
    */
   async create(data: CreateRelationData) {
+    // Prevent self-referencing relations
+    if (data.texteSourceId === data.texteCibleId) {
+      throw new AppError(400, 'Un texte ne peut pas avoir une relation avec lui-même');
+    }
+
     // Verify both textes exist
     const [texteSource, texteCible] = await Promise.all([
       prisma.texte.findUnique({ where: { id: data.texteSourceId } }),
@@ -164,6 +169,18 @@ class RelationService {
     }
     if (!texteCible) {
       throw new AppError(404, 'Texte cible non trouvé');
+    }
+
+    // Check for duplicate relation (same source, target, type)
+    const existing = await prisma.texteRelation.findFirst({
+      where: {
+        texteSourceId: data.texteSourceId,
+        texteCibleId: data.texteCibleId,
+        type: data.type,
+      },
+    });
+    if (existing) {
+      throw new AppError(409, 'Cette relation existe déjà entre ces deux textes');
     }
 
     // Create the relation
@@ -183,21 +200,8 @@ class RelationService {
       },
     });
 
-    // Update target texte state if necessary
-    if (data.type === 'ABROGE') {
-      await prisma.texte.update({
-        where: { id: data.texteCibleId },
-        data: {
-          etat: EtatTexte.ABROGE,
-          dateAbrogation: data.dateEffet ? new Date(data.dateEffet) : new Date(),
-        },
-      });
-    } else if (data.type === 'MODIFIE' || data.type === 'COMPLETE') {
-      await prisma.texte.update({
-        where: { id: data.texteCibleId },
-        data: { etat: EtatTexte.MODIFIE },
-      });
-    }
+    // Recalculate target texte state based on all relations (handles precedence correctly)
+    await this.recalculateTexteState(data.texteCibleId);
 
     log.info('Relation created', {
       id: relation.id,
@@ -361,19 +365,27 @@ class RelationService {
     const refToIdMap = new Map<string, string>();
 
     if (uniqueRefs.length > 0) {
-      const matchingTextes = await prisma.texte.findMany({
-        where: {
-          OR: uniqueRefs.flatMap(ref => [
-            { numero: { contains: ref } },
-            { cid: { contains: ref } },
-          ]),
-        },
-        select: { id: true, numero: true, cid: true },
-      });
+      // Batch refs in chunks of 50 to avoid huge OR queries
+      const BATCH_SIZE = 50;
+      const allMatchingTextes: Array<{ id: string; numero: string | null; cid: string }> = [];
+
+      for (let i = 0; i < uniqueRefs.length; i += BATCH_SIZE) {
+        const batch = uniqueRefs.slice(i, i + BATCH_SIZE);
+        const results = await prisma.texte.findMany({
+          where: {
+            OR: batch.flatMap(ref => [
+              { numero: { contains: ref } },
+              { cid: { contains: ref } },
+            ]),
+          },
+          select: { id: true, numero: true, cid: true },
+        });
+        allMatchingTextes.push(...results);
+      }
 
       // Map each reference to the first matching texte
       for (const ref of uniqueRefs) {
-        const found = matchingTextes.find(
+        const found = allMatchingTextes.find(
           t => (t.numero && t.numero.includes(ref)) || t.cid.includes(ref)
         );
         if (found) refToIdMap.set(ref, found.id);
@@ -409,6 +421,7 @@ class RelationService {
   }> {
     const nodes: Map<string, GraphNode> = new Map();
     const edges: GraphEdge[] = [];
+    const seenEdges = new Set<string>();
     const visited = new Set<string>();
 
     // Batch-load relations for a set of texte IDs in 2 parallel queries
@@ -467,21 +480,24 @@ class RelationService {
 
       for (const rel of outgoing) {
         addNode(rel.texteCible.id, rel.texteCible.titre, rel.texteCible.nature, rel.texteCible.etat);
-        edges.push({
-          source: rel.texteSourceId,
-          target: rel.texteCibleId,
-          type: rel.type,
-          label: RELATION_LABELS[rel.type] || rel.type,
-        });
+        const edgeKey = `${rel.texteSourceId}→${rel.texteCibleId}/${rel.type}`;
+        if (!seenEdges.has(edgeKey)) {
+          seenEdges.add(edgeKey);
+          edges.push({
+            source: rel.texteSourceId,
+            target: rel.texteCibleId,
+            type: rel.type,
+            label: RELATION_LABELS[rel.type] || rel.type,
+          });
+        }
         if (!visited.has(rel.texteCibleId)) nextIds.add(rel.texteCibleId);
       }
 
       for (const rel of incoming) {
         addNode(rel.texteSource.id, rel.texteSource.titre, rel.texteSource.nature, rel.texteSource.etat);
-        const edgeExists = edges.some(
-          e => e.source === rel.texteSourceId && e.target === rel.texteCibleId && e.type === rel.type
-        );
-        if (!edgeExists) {
+        const edgeKey = `${rel.texteSourceId}→${rel.texteCibleId}/${rel.type}`;
+        if (!seenEdges.has(edgeKey)) {
+          seenEdges.add(edgeKey);
           edges.push({
             source: rel.texteSourceId,
             target: rel.texteCibleId,
