@@ -1,14 +1,17 @@
 import { z } from 'zod';
 import { NatureEnum, EtatTexteEnum } from './loi.validator';
 
+// Accept both "2024-01-15" (date) and "2024-01-15T00:00:00.000Z" (datetime)
+const dateString = z.string().date().or(z.string().datetime());
+
 // Upload PDF schema
 export const uploadPdfSchema = z.object({
   // Optional metadata that can be sent with the file
   titre: z.string().min(3).max(500).optional(),
   nature: NatureEnum.optional(),
   numero: z.string().max(50).optional(),
-  dateSignature: z.string().datetime().optional(),
-  datePublication: z.string().datetime().optional(),
+  dateSignature: dateString.optional(),
+  datePublication: dateString.optional(),
   etat: EtatTexteEnum.optional(),
   sousCategorie: z.string().max(100).optional(),
 
@@ -46,8 +49,8 @@ export const confirmUploadSchema = z.object({
   nature: NatureEnum,
   sousCategorie: z.string().max(100).optional(),
   numero: z.string().max(50).optional(),
-  dateSignature: z.string().datetime().optional(),
-  datePublication: z.string().datetime().optional(),
+  dateSignature: dateString.optional(),
+  datePublication: dateString.optional(),
   sourceJO: z.string().max(200).optional(),
   articles: z.array(articleSchema).default([]),
   sections: z.array(sectionSchema).default([]),
