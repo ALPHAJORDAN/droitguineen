@@ -114,9 +114,9 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
         const charDensity = nativeText.length / numPages;
 
         // Vérifier la qualité du texte natif (détection de mots collés / mauvais OCR intégré)
-        const words = nativeText.split(/\s+/).filter(w => w.length > 0);
-        const avgWordLength = words.length > 0 ? words.reduce((sum, w) => sum + w.length, 0) / words.length : 0;
-        const longWordRatio = words.length > 0 ? words.filter(w => w.length > 15).length / words.length : 0;
+        const words = nativeText.split(/\s+/).filter((w: string) => w.length > 0);
+        const avgWordLength = words.length > 0 ? words.reduce((sum: number, w: string) => sum + w.length, 0) / words.length : 0;
+        const longWordRatio = words.length > 0 ? words.filter((w: string) => w.length > 15).length / words.length : 0;
         const nativeQualityOk = avgWordLength < 12 && longWordRatio < 0.15;
 
         // Si le texte natif est suffisant (>500 chars/page) ET de bonne qualité, l'utiliser

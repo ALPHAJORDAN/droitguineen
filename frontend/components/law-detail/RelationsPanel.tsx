@@ -8,16 +8,16 @@ import { cn } from "@/lib/utils";
 const RELATION_TYPES = [
     { key: "abroge", label: "Abroge", color: "text-red-600 dark:text-red-400", dir: "source" },
     { key: "modifie", label: "Modifie", color: "text-amber-600 dark:text-amber-400", dir: "source" },
-    { key: "complete", label: "Complete", color: "text-blue-600 dark:text-blue-400", dir: "source" },
+    { key: "complete", label: "Complète", color: "text-blue-600 dark:text-blue-400", dir: "source" },
     { key: "cite", label: "Cite", color: "text-muted-foreground", dir: "source" },
     { key: "applique", label: "Applique", color: "text-purple-600 dark:text-purple-400", dir: "source" },
     { key: "ratifie", label: "Ratifie", color: "text-teal-600 dark:text-teal-400", dir: "source" },
-    { key: "abrogePar", label: "Abroge par", color: "text-red-600 dark:text-red-400", dir: "cible" },
-    { key: "modifiePar", label: "Modifie par", color: "text-amber-600 dark:text-amber-400", dir: "cible" },
-    { key: "completePar", label: "Complete par", color: "text-blue-600 dark:text-blue-400", dir: "cible" },
-    { key: "citePar", label: "Cite par", color: "text-muted-foreground", dir: "cible" },
-    { key: "appliquePar", label: "Applique par", color: "text-purple-600 dark:text-purple-400", dir: "cible" },
-    { key: "ratifiePar", label: "Ratifie par", color: "text-teal-600 dark:text-teal-400", dir: "cible" },
+    { key: "abrogePar", label: "Abrogé par", color: "text-red-600 dark:text-red-400", dir: "cible" },
+    { key: "modifiePar", label: "Modifié par", color: "text-amber-600 dark:text-amber-400", dir: "cible" },
+    { key: "completePar", label: "Complété par", color: "text-blue-600 dark:text-blue-400", dir: "cible" },
+    { key: "citePar", label: "Cité par", color: "text-muted-foreground", dir: "cible" },
+    { key: "appliquePar", label: "Appliqué par", color: "text-purple-600 dark:text-purple-400", dir: "cible" },
+    { key: "ratifiePar", label: "Ratifié par", color: "text-teal-600 dark:text-teal-400", dir: "cible" },
 ] as const;
 
 interface RelationsPanelProps {
@@ -71,7 +71,7 @@ export function RelationsPanel({ relationsData }: RelationsPanelProps) {
                 {relationsData.counts.cible > 0 && (
                     <div className="border rounded-lg overflow-hidden">
                         <div className="px-4 py-3 bg-muted/30 border-b">
-                            <h3 className="font-semibold text-sm">Ce texte est affecte par</h3>
+                            <h3 className="font-semibold text-sm">Ce texte est affecté par</h3>
                         </div>
                         <ul className="divide-y">
                             {activeRelations

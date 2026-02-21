@@ -66,6 +66,7 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
     const [showSuggestions, setShowSuggestions] = React.useState(false);
     const [selectedIndex, setSelectedIndex] = React.useState(-1);
     const containerRef = React.useRef<HTMLDivElement>(null);
+    const inputRef = React.useRef<HTMLInputElement>(null);
     const debounceTimerRef = React.useRef<ReturnType<typeof setTimeout>>(null);
     const router = useRouter();
 
@@ -175,6 +176,7 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                                 isFocused ? "text-primary" : "text-muted-foreground"
                             )} />
                             <input
+                                ref={inputRef}
                                 type="text"
                                 placeholder="Rechercher une loi, un code, un décret..."
                                 aria-label="Rechercher dans les textes juridiques"
@@ -195,6 +197,7 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
                                         setQuery("");
                                         setDebouncedQuery("");
                                         setShowSuggestions(false);
+                                        inputRef.current?.focus();
                                     }}
                                     className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded-full hover:bg-accent"
                                     aria-label="Effacer"

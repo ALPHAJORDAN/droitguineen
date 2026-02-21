@@ -240,7 +240,7 @@ class UploadService {
 
       const createdSection = await prisma.section.create({
         data: {
-          cid: `LEGITEXT${Date.now()}-S-${Math.random().toString(36).substr(2, 9)}`,
+          cid: `LEGITEXT${Date.now()}-S-${Math.random().toString(36).substring(2, 11)}`,
           titre: section.titre,
           niveau: section.niveau,
           ordre: i + 1,
