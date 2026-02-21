@@ -113,9 +113,15 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
         const numPages = pdfData.numpages || 1;
         const charDensity = nativeText.length / numPages;
 
-        // Si le texte natif est suffisant (>500 chars/page en moyenne), l'utiliser
-        if (charDensity > 500) {
-            log.info('Native extraction successful', { charDensity: Math.round(charDensity), pages: numPages });
+        // Vérifier la qualité du texte natif (détection de mots collés / mauvais OCR intégré)
+        const words = nativeText.split(/\s+/).filter(w => w.length > 0);
+        const avgWordLength = words.length > 0 ? words.reduce((sum, w) => sum + w.length, 0) / words.length : 0;
+        const longWordRatio = words.length > 0 ? words.filter(w => w.length > 15).length / words.length : 0;
+        const nativeQualityOk = avgWordLength < 12 && longWordRatio < 0.15;
+
+        // Si le texte natif est suffisant (>500 chars/page) ET de bonne qualité, l'utiliser
+        if (charDensity > 500 && nativeQualityOk) {
+            log.info('Native extraction successful', { charDensity: Math.round(charDensity), pages: numPages, avgWordLength: avgWordLength.toFixed(1) });
             totalText = nativeText;
             method = 'native';
             totalConfidence = 95;
@@ -131,8 +137,14 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
                 });
             });
         } else {
-            // Étape 2: OCR nécessaire - le PDF semble être scanné
-            log.info('Scanned PDF detected, OCR required', { charDensity: Math.round(charDensity), pages: numPages });
+            // Étape 2: OCR nécessaire - le PDF semble être scanné ou le texte natif est de mauvaise qualité
+            log.info('OCR required', {
+                charDensity: Math.round(charDensity),
+                pages: numPages,
+                avgWordLength: avgWordLength.toFixed(1),
+                longWordRatio: (longWordRatio * 100).toFixed(1) + '%',
+                reason: charDensity <= 500 ? 'low char density' : 'poor native text quality (concatenated words)'
+            });
 
             // Import dynamique des modules OCR
             const { extractPdfPagesAsImages } = await import('./pdf-to-image');
