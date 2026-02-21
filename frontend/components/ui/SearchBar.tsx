@@ -81,7 +81,12 @@ export function SearchBar({ className, onSearch, defaultValue = "", showFilters 
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            if (debounceTimerRef.current) {
+                clearTimeout(debounceTimerRef.current);
+            }
+        };
     }, []);
 
     const handleInputChange = React.useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

@@ -117,6 +117,7 @@ export async function extractPdfPagesAsImages(
         }
 
         if (pageImages.length === 0) {
+            await pdfDocument.destroy();
             throw new Error('Aucune page n\'a pu être convertie en image');
         }
 

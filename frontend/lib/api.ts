@@ -817,9 +817,12 @@ export async function downloadExport(
     const a = document.createElement('a');
     a.href = url;
     a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    activeExportController = null;
+    try {
+        document.body.appendChild(a);
+        a.click();
+    } finally {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        activeExportController = null;
+    }
 }

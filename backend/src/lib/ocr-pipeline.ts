@@ -218,11 +218,12 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
 
                 // Fallback Tesseract.js avec images
                 if (!ocrSuccess) {
+                    let worker: Awaited<ReturnType<typeof import('tesseract.js')['createWorker']>> | null = null;
                     try {
                         log.info('Falling back to Tesseract.js OCR');
                         const { createWorker } = await import('tesseract.js');
 
-                        const worker = await createWorker('fra');
+                        worker = await createWorker('fra');
                         method = 'ocr';
                         totalText = '';
                         pages.length = 0;
@@ -241,8 +242,6 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
                             pageConfidences.push(data.confidence);
                         }
 
-                        await worker.terminate();
-
                         totalConfidence = pageConfidences.length > 0
                             ? pageConfidences.reduce((a, b) => a + b, 0) / pageConfidences.length
                             : 0;
@@ -251,6 +250,10 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
                         ocrSuccess = totalText.trim().length > 0;
                     } catch (tesseractError) {
                         log.error('Tesseract.js OCR failed', tesseractError as Error);
+                    } finally {
+                        if (worker) {
+                            await worker.terminate().catch(() => {});
+                        }
                     }
                 }
             }
