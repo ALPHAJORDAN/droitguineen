@@ -90,6 +90,8 @@ export function UsersTab() {
                 onSuccess: () => {
                     addToast({ type: "success", message: "Utilisateur supprimé" });
                     setPendingDeleteId(null);
+                    // Reset to page 1 to avoid showing empty page
+                    if (users.length <= 1 && page > 1) setPage(1);
                 },
                 onError: (error) => {
                     addToast({ type: "error", message: error instanceof Error ? error.message : "Erreur" });

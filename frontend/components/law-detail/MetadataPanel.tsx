@@ -6,21 +6,28 @@ import {
     Calendar, Hash, FileText, ExternalLink, Download,
     User, BookMarked, Shield, Tag,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 function CopyableValue({ label, value }: { label: string; value: string }) {
     const [copied, setCopied] = useState(false);
-
     const [failed, setFailed] = useState(false);
+    const timerRef = useRef<ReturnType<typeof setTimeout>>(null);
+
+    useEffect(() => {
+        return () => { if (timerRef.current) clearTimeout(timerRef.current); };
+    }, []);
 
     const handleCopy = async () => {
+        if (timerRef.current) clearTimeout(timerRef.current);
         try {
             await navigator.clipboard.writeText(value);
             setCopied(true);
-            setTimeout(() => setCopied(false), 2500);
+            setFailed(false);
+            timerRef.current = setTimeout(() => setCopied(false), 2500);
         } catch {
             setFailed(true);
-            setTimeout(() => setFailed(false), 2500);
+            setCopied(false);
+            timerRef.current = setTimeout(() => setFailed(false), 2500);
         }
     };
 

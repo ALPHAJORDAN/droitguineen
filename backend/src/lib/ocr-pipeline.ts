@@ -751,11 +751,12 @@ export function extractStructure(text: string): DocumentStructure {
             structure.articles.push(arts[0]);
         }
     }
-    // Trier par numéro
+    // Trier par numéro (avec support des suffixes : 1, 1bis, 1ter, 2, etc.)
     structure.articles.sort((a, b) => {
         const na = parseInt(a.numero) || 0;
         const nb = parseInt(b.numero) || 0;
-        return na - nb;
+        if (na !== nb) return na - nb;
+        return a.numero.localeCompare(b.numero, 'fr');
     });
 
     return structure;
