@@ -177,18 +177,6 @@ function HeaderContent() {
                     >
                         Bibliotheque
                     </Link>
-                    <Link
-                        href="/recherche"
-                        aria-current={pathname === '/recherche' && !searchParams.get('type') ? "page" : undefined}
-                        className={cn(
-                            "relative py-1 transition-all hover:text-foreground",
-                            pathname === '/recherche' && !searchParams.get('type')
-                                ? "text-foreground bg-accent/50 px-3 rounded-full after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:bg-primary after:rounded-full"
-                                : "text-foreground/70"
-                        )}
-                    >
-                        Recherche
-                    </Link>
                 </nav>
                 <div className="ml-auto flex items-center space-x-2 pr-4">
                     {isAuthenticated ? (
