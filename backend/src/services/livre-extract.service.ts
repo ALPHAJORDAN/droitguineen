@@ -59,10 +59,10 @@ export function detectFormat(filename: string): string {
 // ============ PDF ============
 
 async function extractFromPdf(filePath: string): Promise<ExtractionResult> {
-  const pdfParseModule = await import('pdf-parse');
-  const pdfParse = pdfParseModule.default || pdfParseModule;
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const pdfParse = require('pdf-parse-fork');
   const buffer = fs.readFileSync(filePath);
-  const data = await (pdfParse as unknown as (buf: Buffer) => Promise<{ text: string; info?: { Title?: string; Author?: string } }>)(buffer);
+  const data = await pdfParse(buffer);
   const text = data.text || '';
 
   const chapitres = splitTextIntoChapters(text);
