@@ -15,6 +15,11 @@ const NATURE_ICON_MAP: Record<string, React.ComponentType<{ className?: string }
     CODE: BookOpen,
     JURISPRUDENCE: Gavel,
     AUTRE: FileText,
+    // OHADA
+    ACTE_UNIFORME_OHADA: Scale,
+    JURISPRUDENCE_CCJA: Gavel,
+    TRAITE_OHADA: ScrollText,
+    REGLEMENT_OHADA: FileCheck,
 };
 
 export function getNatureIcon(nature: string, size: "sm" | "md" = "sm"): React.ReactNode {

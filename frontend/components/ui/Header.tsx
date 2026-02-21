@@ -154,6 +154,30 @@ function HeaderContent() {
                         Jurisprudence
                     </Link>
                     <Link
+                        href="/ohada"
+                        aria-current={isActive('/ohada') ? "page" : undefined}
+                        className={cn(
+                            "relative py-1 transition-all hover:text-foreground",
+                            isActive('/ohada')
+                                ? "text-foreground bg-accent/50 px-3 rounded-full after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:bg-primary after:rounded-full"
+                                : "text-foreground/70"
+                        )}
+                    >
+                        OHADA
+                    </Link>
+                    <Link
+                        href="/bibliotheque"
+                        aria-current={pathname === '/bibliotheque' ? "page" : undefined}
+                        className={cn(
+                            "relative py-1 transition-all hover:text-foreground",
+                            pathname === '/bibliotheque'
+                                ? "text-foreground bg-accent/50 px-3 rounded-full after:absolute after:bottom-0 after:left-3 after:right-3 after:h-0.5 after:bg-primary after:rounded-full"
+                                : "text-foreground/70"
+                        )}
+                    >
+                        Bibliotheque
+                    </Link>
+                    <Link
                         href="/recherche"
                         aria-current={pathname === '/recherche' && !searchParams.get('type') ? "page" : undefined}
                         className={cn(

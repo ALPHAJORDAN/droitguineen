@@ -16,6 +16,7 @@ import rechercheRouter from './routes/recherche';
 import uploadRouter from './routes/upload';
 import exportRouter from './routes/export';
 import relationsRouter from './routes/relations';
+import livresRouter from './routes/livres';
 import { userRepository } from './repositories/user.repository';
 import prisma from './lib/prisma';
 import { meiliClient } from './lib/meilisearch';
@@ -147,6 +148,7 @@ export function createApp(): Application {
   // Routes with specific rate limiters
   app.use('/auth', authLimiter, authRouter);
   app.use('/lois', loisLimiter, loisRouter);
+  app.use('/livres', loisLimiter, livresRouter);
   app.use('/recherche', searchLimiter, rechercheRouter);
   app.use('/upload', uploadLimiter, uploadRouter);
   app.use('/export', exportLimiter, exportRouter);

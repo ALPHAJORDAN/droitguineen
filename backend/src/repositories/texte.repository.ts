@@ -4,7 +4,7 @@ import { Nature, EtatTexte, Prisma } from '@prisma/client';
 export interface FindAllOptions {
   page: number;
   limit: number;
-  nature?: Nature;
+  nature?: string;
   etat?: EtatTexte;
   sousCategorie?: string;
   dateDebut?: Date;
@@ -97,7 +97,8 @@ class TexteRepository {
     const where: Prisma.TexteWhereInput = {};
 
     if (options.nature) {
-      where.nature = options.nature;
+      const natures = (options.nature as string).split(',').filter(Boolean) as Nature[];
+      where.nature = natures.length === 1 ? natures[0] : { in: natures };
     }
 
     if (options.sousCategorie) {

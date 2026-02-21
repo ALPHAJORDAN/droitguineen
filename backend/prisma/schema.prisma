@@ -153,6 +153,11 @@ enum Nature {
   CODE
   JURISPRUDENCE
   AUTRE
+  // OHADA
+  ACTE_UNIFORME_OHADA
+  JURISPRUDENCE_CCJA
+  TRAITE_OHADA
+  REGLEMENT_OHADA
 }
 
 enum EtatTexte {
@@ -218,6 +223,54 @@ enum TypeRelation {
   RATIFIE           // Le texte source ratifie le texte cible (pour ordonnances)
   CODIFIE           // Le texte source codifie le texte cible
   CONSOLIDE         // Version consolidée
+}
+
+// ==========================================
+// Bibliothèque (Livres)
+// ==========================================
+
+enum CategorieLivre {
+  DROIT
+  PHILOSOPHIE
+  POLITIQUE
+  ECONOMIE
+}
+
+model Livre {
+  id               String          @id @default(uuid())
+  titre            String
+  auteur           String
+  editeur          String?
+  anneePublication Int?
+  isbn             String?         @unique
+  resume           String?         @db.Text
+  categorie        CategorieLivre
+  couverture       String?         // Chemin image de couverture
+  fichierPdf       String?         // Chemin PDF original
+
+  chapitres        Chapitre[]
+
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([categorie])
+  @@index([auteur])
+  @@index([createdAt])
+}
+
+model Chapitre {
+  id       String @id @default(uuid())
+  titre    String
+  contenu  String @db.Text
+  ordre    Int
+  livreId  String
+  livre    Livre  @relation(fields: [livreId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([livreId, ordre])
+  @@index([livreId, ordre])
 }
 
 // ==========================================

@@ -24,7 +24,14 @@ import {
     loginApi,
     logoutApi,
     clearTokens,
+    fetchLivres,
+    getLivre,
+    fetchLivreStats,
+    createLivre,
+    updateLivre,
+    deleteLivre,
     Texte,
+    Livre,
     StatsResponse,
     PaginatedResponse,
     SearchResponse,
@@ -63,6 +70,12 @@ export const queryKeys = {
         all: ["suggestions"] as const,
         query: (q: string) => ["suggestions", q] as const,
     },
+    livres: {
+        all: ["livres"] as const,
+        list: (filters?: object) => [...queryKeys.livres.all, "list", filters] as const,
+        detail: (id: string) => [...queryKeys.livres.all, "detail", id] as const,
+    },
+    livreStats: ["livreStats"] as const,
     relations: {
         all: ["relations"] as const,
         forTexte: (texteId: string) => [...queryKeys.relations.all, texteId] as const,
@@ -344,5 +357,71 @@ export function useExport() {
     return useMutation({
         mutationFn: ({ texteId, format }: { texteId: string; format: 'pdf' | 'docx' | 'json' | 'html' }) =>
             downloadExport(texteId, format),
+    });
+}
+
+// ============ Hooks pour les Livres ============
+
+export function useLivres(options?: {
+    page?: number;
+    limit?: number;
+    categorie?: string;
+    auteur?: string;
+    sort?: string;
+    order?: 'asc' | 'desc';
+}) {
+    return useQuery<PaginatedResponse<Livre>>({
+        queryKey: queryKeys.livres.list(options),
+        queryFn: () => fetchLivres(options),
+        staleTime: 5 * 60 * 1000,
+    });
+}
+
+export function useLivre(id: string) {
+    return useQuery<Livre>({
+        queryKey: queryKeys.livres.detail(id),
+        queryFn: () => getLivre(id),
+        enabled: !!id,
+        staleTime: 10 * 60 * 1000,
+    });
+}
+
+export function useLivreStats() {
+    return useQuery({
+        queryKey: queryKeys.livreStats,
+        queryFn: fetchLivreStats,
+        staleTime: 5 * 60 * 1000,
+    });
+}
+
+export function useCreateLivre() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: createLivre,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.livres.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.livreStats });
+        },
+    });
+}
+
+export function useUpdateLivre() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: string; data: Partial<Livre> }) => updateLivre(id, data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.livres.all });
+        },
+    });
+}
+
+export function useDeleteLivre() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: deleteLivre,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.livres.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.livreStats });
+        },
     });
 }

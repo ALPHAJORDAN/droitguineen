@@ -82,6 +82,27 @@ const menuItems: MenuItem[] = [
             { title: "Conventions", href: "/recherche?type=Conventions" },
         ],
     },
+    {
+        title: "OHADA",
+        icon: <Scale className="h-4 w-4" />,
+        children: [
+            { title: "Actes Uniformes", href: "/recherche?type=Actes uniformes OHADA" },
+            { title: "Jurisprudence CCJA", href: "/recherche?type=Jurisprudence CCJA" },
+            { title: "Traités OHADA", href: "/recherche?type=Traites OHADA" },
+            { title: "Règlements OHADA", href: "/recherche?type=Reglements OHADA" },
+        ],
+    },
+    {
+        title: "Bibliotheque",
+        icon: <BookOpen className="h-4 w-4" />,
+        children: [
+            { title: "Tous les livres", href: "/bibliotheque" },
+            { title: "Droit", href: "/bibliotheque?categorie=DROIT" },
+            { title: "Philosophie", href: "/bibliotheque?categorie=PHILOSOPHIE" },
+            { title: "Politique", href: "/bibliotheque?categorie=POLITIQUE" },
+            { title: "Economie", href: "/bibliotheque?categorie=ECONOMIE" },
+        ],
+    },
 ];
 
 interface SidebarProps {

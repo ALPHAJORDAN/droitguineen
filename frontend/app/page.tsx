@@ -28,6 +28,7 @@ const CATEGORIES = [
     { nature: "JURISPRUDENCE", type: "Jurisprudence", label: "Jurisprudence", description: "Décisions de justice", icon: <Scale className="h-7 w-7" /> },
     { nature: "TRAITE", type: "Traites", label: "Traités", description: "Accords internationaux", icon: <ScrollText className="h-7 w-7" /> },
     { nature: "CONVENTION", type: "Conventions", label: "Conventions", description: "Conventions internationales", icon: <ScrollText className="h-7 w-7" /> },
+    { nature: "ACTE_UNIFORME_OHADA", type: "Actes uniformes OHADA", label: "OHADA", description: "Droit des affaires OHADA", icon: <Scale className="h-7 w-7" /> },
 ];
 
 const FEATURES = [
@@ -221,6 +222,52 @@ function HomeContent() {
                                 )}
                             </>
                         )}
+                    </div>
+                </section>
+
+                {/* Bibliotheque Section */}
+                <section className="w-full py-16 md:py-24 bg-background border-t">
+                    <div className="container px-4 md:px-6">
+                        <div className="flex items-center justify-between mb-8">
+                            <div>
+                                <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">Bibliotheque</h2>
+                                <p className="mt-1 text-muted-foreground">
+                                    Ouvrages de droit, philosophie, politique et economie
+                                </p>
+                            </div>
+                            <Link href="/bibliotheque">
+                                <Button variant="outline" className="hidden sm:inline-flex gap-2">
+                                    Voir tout <ArrowRight className="h-4 w-4" />
+                                </Button>
+                            </Link>
+                        </div>
+                        <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
+                            {[
+                                { cat: "DROIT", label: "Droit", desc: "Ouvrages juridiques", icon: <Scale className="h-7 w-7" /> },
+                                { cat: "PHILOSOPHIE", label: "Philosophie", desc: "Pensee et reflexion", icon: <BookOpen className="h-7 w-7" /> },
+                                { cat: "POLITIQUE", label: "Politique", desc: "Sciences politiques", icon: <FileText className="h-7 w-7" /> },
+                                { cat: "ECONOMIE", label: "Economie", desc: "Sciences economiques", icon: <ScrollText className="h-7 w-7" /> },
+                            ].map((item) => (
+                                <Link
+                                    key={item.cat}
+                                    href={`/bibliotheque?categorie=${item.cat}`}
+                                    className="group flex flex-col items-center space-y-2 text-center p-5 border rounded-2xl hover:shadow-lg transition-all duration-300 hover:scale-[1.02] bg-card"
+                                >
+                                    <div className="p-3 bg-primary/10 rounded-full text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300">
+                                        {item.icon}
+                                    </div>
+                                    <h3 className="text-sm font-bold">{item.label}</h3>
+                                    <p className="text-xs text-muted-foreground line-clamp-1">{item.desc}</p>
+                                </Link>
+                            ))}
+                        </div>
+                        <div className="text-center mt-6 sm:hidden">
+                            <Link href="/bibliotheque">
+                                <Button variant="outline" className="gap-2">
+                                    Voir la bibliotheque <ArrowRight className="h-4 w-4" />
+                                </Button>
+                            </Link>
+                        </div>
                     </div>
                 </section>
 

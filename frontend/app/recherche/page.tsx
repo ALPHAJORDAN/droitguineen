@@ -38,6 +38,11 @@ const TYPE_TO_NATURE: Record<string, string> = {
     "Traites": "TRAITE",
     "Codes": "CODE",
     "Jurisprudence": "JURISPRUDENCE",
+    // OHADA
+    "Actes uniformes OHADA": "ACTE_UNIFORME_OHADA",
+    "Jurisprudence CCJA": "JURISPRUDENCE_CCJA",
+    "Traites OHADA": "TRAITE_OHADA",
+    "Reglements OHADA": "REGLEMENT_OHADA",
 };
 
 // Filter categories for the sidebar
@@ -53,6 +58,10 @@ const FILTER_GROUPS = [
     {
         label: "Autres",
         types: ["Codes", "Jurisprudence", "Traites", "Conventions"],
+    },
+    {
+        label: "OHADA",
+        types: ["Actes uniformes OHADA", "Jurisprudence CCJA", "Traites OHADA", "Reglements OHADA"],
     },
 ];
 

@@ -224,6 +224,74 @@ export const HIERARCHIE_JURIDIQUE: Record<string, DocumentCategory> = {
             showVisas: false, showSignataires: true, showJO: false,
         }
     },
+    // ============ OHADA ============
+    "ACTE_UNIFORME_OHADA": {
+        label: "Acte Uniforme OHADA",
+        nature: "ACTE_UNIFORME_OHADA",
+        icon: icon(Scale),
+        description: "Acte Uniforme adopté par le Conseil des Ministres de l'OHADA",
+        subtypes: [
+            { value: "audcg", label: "AUDCG", description: "Droit commercial général" },
+            { value: "auscgie", label: "AUSCGIE", description: "Sociétés commerciales et GIE" },
+            { value: "aupsrve", label: "AUPSRVE", description: "Procédures simplifiées de recouvrement" },
+            { value: "aupcap", label: "AUPCAP", description: "Procédures collectives d'apurement du passif" },
+            { value: "audcif", label: "AUDCIF", description: "Droit comptable et information financière" },
+            { value: "auctmr", label: "AUCTMR", description: "Contrats de transport de marchandises par route" },
+            { value: "aus", label: "AUS", description: "Sûretés" },
+            { value: "auda", label: "AUDA", description: "Droit de l'arbitrage" },
+            { value: "aumf", label: "AUMF", description: "Médiation" },
+            { value: "audc", label: "AUDC", description: "Droit coopératif" },
+        ],
+        fields: {
+            numero: { prefix: "", format: "Titre", placeholder: "Ex: AUDCG révisé 2010" },
+            showVisas: true, showSignataires: true, showJO: false, showDateEntreeVigueur: true,
+        }
+    },
+    "JURISPRUDENCE_CCJA": {
+        label: "Jurisprudence CCJA",
+        nature: "JURISPRUDENCE_CCJA",
+        icon: icon(Gavel),
+        description: "Décision de la Cour Commune de Justice et d'Arbitrage",
+        subtypes: [
+            { value: "arret", label: "Arrêt", description: "Arrêt de la CCJA" },
+            { value: "avis", label: "Avis consultatif", description: "Avis consultatif de la CCJA" },
+            { value: "ordonnance", label: "Ordonnance", description: "Ordonnance de la CCJA" },
+        ],
+        fields: {
+            numero: { prefix: "", format: "Référence", placeholder: "Ex: Arrêt n° 001/2024" },
+            showVisas: false, showSignataires: true, showJO: false,
+        }
+    },
+    "TRAITE_OHADA": {
+        label: "Traité OHADA",
+        nature: "TRAITE_OHADA",
+        icon: icon(Scale),
+        description: "Traité relatif à l'harmonisation du droit des affaires en Afrique",
+        subtypes: [
+            { value: "traite_fondateur", label: "Traité fondateur", description: "Traité de Port-Louis (1993)" },
+            { value: "traite_revise", label: "Traité révisé", description: "Traité révisé de Québec (2008)" },
+            { value: "protocole", label: "Protocole", description: "Protocole additionnel" },
+        ],
+        fields: {
+            numero: { prefix: "", format: "Titre", placeholder: "Ex: Traité de Port-Louis" },
+            showVisas: true, showSignataires: true, showJO: false, showDateEntreeVigueur: true,
+        }
+    },
+    "REGLEMENT_OHADA": {
+        label: "Règlement OHADA",
+        nature: "REGLEMENT_OHADA",
+        icon: icon(FileCheck),
+        description: "Règlement adopté par le Conseil des Ministres de l'OHADA",
+        subtypes: [
+            { value: "procedure", label: "Règlement de procédure", description: "Procédure devant la CCJA" },
+            { value: "arbitrage", label: "Règlement d'arbitrage", description: "Arbitrage CCJA" },
+            { value: "comptable", label: "Règlement comptable", description: "Normes comptables OHADA" },
+        ],
+        fields: {
+            numero: { prefix: "", format: "Référence", placeholder: "Ex: Règlement n° 001/2024/CM" },
+            showVisas: true, showSignataires: true, showJO: false, showDateEntreeVigueur: true,
+        }
+    },
 };
 
 // ============ Autorités signataires ============

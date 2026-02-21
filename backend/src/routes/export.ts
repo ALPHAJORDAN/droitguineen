@@ -417,4 +417,28 @@ function generateHTML(texte: {
 </html>`;
 }
 
+/**
+ * GET /export/livre/pdf/:id - Télécharger le PDF original d'un livre
+ */
+router.get('/livre/pdf/:id', validateId(), asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const livre = await prisma.livre.findUnique({ where: { id }, select: { titre: true, fichierPdf: true } });
+    if (!livre) {
+        throw new AppError(404, 'Livre non trouvé');
+    }
+    if (!livre.fichierPdf) {
+        throw new AppError(404, 'Aucun fichier PDF associé à ce livre');
+    }
+
+    const path = require('path');
+    const fs = require('fs');
+    const filePath = path.resolve(livre.fichierPdf);
+    if (!fs.existsSync(filePath)) {
+        throw new AppError(404, 'Fichier PDF introuvable sur le serveur');
+    }
+
+    const filename = safeFilename(livre.titre);
+    res.download(filePath, `${filename}.pdf`);
+}));
+
 export default router;

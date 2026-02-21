@@ -16,6 +16,10 @@ export const NatureEnum = z.enum([
   'CODE',
   'JURISPRUDENCE',
   'AUTRE',
+  'ACTE_UNIFORME_OHADA',
+  'JURISPRUDENCE_CCJA',
+  'TRAITE_OHADA',
+  'REGLEMENT_OHADA',
 ]);
 
 export const EtatTexteEnum = z.enum([
@@ -88,7 +92,10 @@ export const updateLoiSchema = createLoiSchema.partial().omit({ cid: true });
 export const paginationSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
-  nature: NatureEnum.optional(),
+  nature: z.string().optional().refine(
+    (val) => !val || val.split(',').every((v) => NatureEnum.safeParse(v.trim()).success),
+    { message: 'Nature invalide' }
+  ),
   etat: EtatTexteEnum.optional(),
   sousCategorie: z.string().optional(),
   dateDebut: dateString.optional(),

@@ -611,6 +611,11 @@ export const NATURE_LABELS: Record<string, string> = {
     CODE: "Code",
     JURISPRUDENCE: "Jurisprudence",
     AUTRE: "Autre",
+    // OHADA
+    ACTE_UNIFORME_OHADA: "Acte Uniforme OHADA",
+    JURISPRUDENCE_CCJA: "Jurisprudence CCJA",
+    TRAITE_OHADA: "Traité OHADA",
+    REGLEMENT_OHADA: "Règlement OHADA",
 };
 
 // Etat labels for display
@@ -825,4 +830,113 @@ export async function downloadExport(
         URL.revokeObjectURL(url);
         activeExportController = null;
     }
+}
+
+// ============ Bibliothèque (Livres) ============
+
+export interface Livre {
+    id: string;
+    titre: string;
+    auteur: string;
+    editeur?: string;
+    anneePublication?: number;
+    isbn?: string;
+    resume?: string;
+    categorie: string;
+    couverture?: string;
+    fichierPdf?: string;
+    chapitres?: Chapitre[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface Chapitre {
+    id: string;
+    titre: string;
+    contenu: string;
+    ordre: number;
+}
+
+export const CATEGORIE_LIVRE_LABELS: Record<string, string> = {
+    DROIT: "Droit",
+    PHILOSOPHIE: "Philosophie",
+    POLITIQUE: "Politique",
+    ECONOMIE: "Économie",
+};
+
+export async function fetchLivres(options?: {
+    page?: number;
+    limit?: number;
+    categorie?: string;
+    auteur?: string;
+    sort?: string;
+    order?: 'asc' | 'desc';
+}): Promise<PaginatedResponse<Livre>> {
+    const params = new URLSearchParams();
+    if (options?.page) params.set('page', options.page.toString());
+    if (options?.limit) params.set('limit', options.limit.toString());
+    if (options?.categorie) params.set('categorie', options.categorie);
+    if (options?.auteur) params.set('auteur', options.auteur);
+    if (options?.sort) params.set('sort', options.sort);
+    if (options?.order) params.set('order', options.order);
+
+    const res = await fetch(`${API_BASE_URL}/livres?${params.toString()}`);
+    if (!res.ok) throw new Error('Erreur lors du chargement des livres');
+    return res.json();
+}
+
+export async function getLivre(id: string): Promise<Livre> {
+    const res = await fetch(`${API_BASE_URL}/livres/${id}`);
+    if (!res.ok) throw new Error('Livre non trouvé');
+    const json = await res.json();
+    return json.data;
+}
+
+export async function fetchLivreStats(): Promise<{ total: number; categorieCounts: Record<string, number>; recent: Livre[] }> {
+    const res = await fetch(`${API_BASE_URL}/livres/stats`);
+    if (!res.ok) throw new Error('Erreur lors du chargement des statistiques');
+    const json = await res.json();
+    return json.data;
+}
+
+export async function createLivre(data: Partial<Livre> & { chapitres?: Array<{ titre: string; contenu: string; ordre: number }> }): Promise<Livre> {
+    const res = await authFetch(`${API_BASE_URL}/livres`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erreur lors de la création');
+    }
+    const json = await res.json();
+    return json.data;
+}
+
+export async function updateLivre(id: string, data: Partial<Livre>): Promise<Livre> {
+    const res = await authFetch(`${API_BASE_URL}/livres/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erreur lors de la mise à jour');
+    }
+    const json = await res.json();
+    return json.data;
+}
+
+export async function deleteLivre(id: string): Promise<void> {
+    const res = await authFetch(`${API_BASE_URL}/livres/${id}`, {
+        method: 'DELETE',
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erreur lors de la suppression');
+    }
+}
+
+export function getLivreExportPdfUrl(livreId: string): string {
+    return `${API_BASE_URL}/export/livre/pdf/${livreId}`;
 }
