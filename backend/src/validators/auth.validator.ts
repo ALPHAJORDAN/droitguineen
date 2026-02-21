@@ -3,6 +3,7 @@ import { z } from 'zod';
 const passwordSchema = z
   .string()
   .min(8, 'Le mot de passe doit faire au moins 8 caractères')
+  .max(128, 'Le mot de passe ne doit pas dépasser 128 caractères')
   .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une majuscule')
   .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre');
 

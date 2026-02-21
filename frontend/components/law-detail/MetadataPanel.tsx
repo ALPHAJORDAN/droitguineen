@@ -131,7 +131,7 @@ export function MetadataPanel({ texte }: MetadataPanelProps) {
                         <span className="text-sm">{texte.sourceJO}</span>
                     </div>
                 )}
-                {texte.urlJO && (
+                {texte.urlJO && /^https?:\/\//i.test(texte.urlJO) && (
                     <div>
                         <span className="text-xs text-muted-foreground flex items-center gap-1">
                             <ExternalLink className="h-3 w-3" /> Lien JO

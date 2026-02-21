@@ -7,6 +7,7 @@ import { generalLimiter, searchLimiter, uploadLimiter, exportLimiter, authLimite
 import { errorHandler, notFoundHandler } from './middlewares/error.middleware';
 import { requestLogger, logger } from './utils/logger';
 import { swaggerSpec } from './config/swagger';
+import { config } from './config';
 
 // Routes
 import authRouter from './routes/auth';
@@ -119,27 +120,29 @@ export function createApp(): Application {
     });
   });
 
-  // Swagger documentation (with relaxed CSP for Swagger UI)
-  app.use(
-    '/docs',
-    (req: Request, res: Response, next: NextFunction) => {
-      res.setHeader(
-        'Content-Security-Policy',
-        "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://validator.swagger.io"
-      );
-      next();
-    },
-    swaggerUi.serve,
-    swaggerUi.setup(swaggerSpec, {
-      customCss: '.swagger-ui .topbar { display: none }',
-      customSiteTitle: 'Droitguinéen API Documentation',
-    })
-  );
+  // Swagger documentation (disabled in production)
+  if (!config.isProduction) {
+    app.use(
+      '/docs',
+      (req: Request, res: Response, next: NextFunction) => {
+        res.setHeader(
+          'Content-Security-Policy',
+          "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data: https://validator.swagger.io"
+        );
+        next();
+      },
+      swaggerUi.serve,
+      swaggerUi.setup(swaggerSpec, {
+        customCss: '.swagger-ui .topbar { display: none }',
+        customSiteTitle: 'Droitguinéen API Documentation',
+      })
+    );
 
-  // JSON spec endpoint
-  app.get('/docs/spec.json', (req, res) => {
-    res.json(swaggerSpec);
-  });
+    // JSON spec endpoint
+    app.get('/docs/spec.json', (req, res) => {
+      res.json(swaggerSpec);
+    });
+  }
 
   // Routes with specific rate limiters
   app.use('/auth', authLimiter, authRouter);

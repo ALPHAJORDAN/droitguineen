@@ -27,7 +27,7 @@ function LoginPageContent() {
     const redirect = (() => {
         const param = searchParams.get("redirect");
         // Only allow relative paths starting with / to prevent open redirect
-        if (param && param.startsWith("/") && !param.startsWith("//")) return param;
+        if (param && param.startsWith("/") && !param.startsWith("//") && !param.startsWith("/\\")) return param;
         return "/admin";
     })();
 

@@ -79,7 +79,7 @@ function useSearchFilters() {
 
 /** Sanitize highlighted HTML from Meilisearch, only allowing <mark> tags */
 function sanitizeHighlight(html: string): string {
-    return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['mark'] });
+    return DOMPurify.sanitize(html, { ALLOWED_TAGS: ['mark'], ALLOWED_ATTR: [] });
 }
 
 function ArticleCard({ article }: { article: ArticleHit }) {
