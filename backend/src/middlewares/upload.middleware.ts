@@ -99,6 +99,43 @@ export async function verifyPdfSignature(
   }
 }
 
+// ============ Livre upload middleware (multi-format) ============
+
+const LIVRE_ALLOWED_MIMETYPES = [
+  'application/pdf',
+  'application/epub+zip',
+  'text/plain',
+  'text/html',
+];
+
+const LIVRE_ALLOWED_EXTENSIONS = new Set(['.pdf', '.epub', '.txt', '.html', '.htm']);
+
+const livreFileFilter = (
+  req: Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback
+) => {
+  if (!LIVRE_ALLOWED_MIMETYPES.includes(file.mimetype)) {
+    return cb(new AppError(400, 'Format non supporté. Formats acceptés : PDF, EPUB, TXT, HTML'));
+  }
+
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!LIVRE_ALLOWED_EXTENSIONS.has(ext)) {
+    return cb(new AppError(400, 'Extension de fichier invalide'));
+  }
+
+  cb(null, true);
+};
+
+export const livreUploadMiddleware = multer({
+  storage,
+  fileFilter: livreFileFilter,
+  limits: {
+    fileSize: MAX_FILE_SIZE,
+    files: 1,
+  },
+});
+
 // Clean up file on error
 export function cleanupOnError(filePath?: string) {
   if (filePath && fs.existsSync(filePath)) {

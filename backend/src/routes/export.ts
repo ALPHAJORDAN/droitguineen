@@ -418,6 +418,48 @@ function generateHTML(texte: {
 }
 
 /**
+ * GET /export/livre/download/:id - Télécharger le fichier original d'un livre (tout format)
+ */
+router.get('/livre/download/:id', validateId(), asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    const livre = await prisma.livre.findUnique({
+        where: { id },
+        select: { titre: true, fichierOriginal: true, formatOriginal: true, fichierPdf: true },
+    });
+    if (!livre) {
+        throw new AppError(404, 'Livre non trouvé');
+    }
+
+    const fileSrc = livre.fichierOriginal || livre.fichierPdf;
+    if (!fileSrc) {
+        throw new AppError(404, 'Aucun fichier associé à ce livre');
+    }
+
+    const path = require('path');
+    const fs = require('fs');
+    const { validateUploadPath } = require('../utils/sanitizer');
+    const filePath = path.resolve(fileSrc);
+    validateUploadPath(filePath);
+    if (!fs.existsSync(filePath)) {
+        throw new AppError(404, 'Fichier introuvable sur le serveur');
+    }
+
+    const format = livre.formatOriginal || 'pdf';
+    const contentTypes: Record<string, string> = {
+        pdf: 'application/pdf',
+        epub: 'application/epub+zip',
+        txt: 'text/plain; charset=utf-8',
+        html: 'text/html; charset=utf-8',
+    };
+
+    const ext = format === 'html' ? '.html' : `.${format}`;
+    const filename = safeFilename(livre.titre);
+
+    res.setHeader('Content-Type', contentTypes[format] || 'application/octet-stream');
+    res.download(filePath, `${filename}${ext}`);
+}));
+
+/**
  * GET /export/livre/pdf/:id - Télécharger le PDF original d'un livre
  */
 router.get('/livre/pdf/:id', validateId(), asyncHandler(async (req: Request, res: Response) => {

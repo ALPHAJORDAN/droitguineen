@@ -1,14 +1,14 @@
 "use client";
 
-import { useState } from "react";
-import { useLivres, useDeleteLivre, useCreateLivre } from "@/lib/hooks";
-import { Livre, CATEGORIE_LIVRE_LABELS } from "@/lib/api";
+import { useState, useRef } from "react";
+import { useLivres, useDeleteLivre, useCreateLivre, useUploadLivre } from "@/lib/hooks";
+import { Livre, CATEGORIE_LIVRE_LABELS, FORMAT_LABELS } from "@/lib/api";
 import { Button } from "@/components/ui/Button";
 import { useToast } from "./Toast";
 import Link from "next/link";
 import {
     BookOpen, Trash2, RefreshCw, Loader2, Eye, Plus,
-    Search, ChevronLeft, ChevronRight, X,
+    Search, ChevronLeft, ChevronRight, X, Upload, FileText,
 } from "lucide-react";
 
 const ITEMS_PER_PAGE = 20;
@@ -25,6 +25,7 @@ export function LivresTab() {
     });
     const deleteMutation = useDeleteLivre();
     const createMutation = useCreateLivre();
+    const uploadMutation = useUploadLivre();
     const { addToast } = useToast();
 
     const livres = data?.data || [];
@@ -180,23 +181,36 @@ export function LivresTab() {
             {showCreateForm && (
                 <CreateLivreModal
                     onClose={() => setShowCreateForm(false)}
-                    onCreate={(data) => {
-                        createMutation.mutate(data, {
-                            onSuccess: () => {
-                                addToast({ type: "success", message: "Livre cree" });
-                                setShowCreateForm(false);
-                            },
-                            onError: (error) => {
-                                addToast({ type: "error", message: error instanceof Error ? error.message : "Erreur" });
-                            },
-                        });
+                    onCreate={(data, file) => {
+                        const onSuccess = () => {
+                            addToast({ type: "success", message: "Livre cree" });
+                            setShowCreateForm(false);
+                        };
+                        const onError = (error: Error) => {
+                            addToast({ type: "error", message: error instanceof Error ? error.message : "Erreur" });
+                        };
+
+                        if (file) {
+                            uploadMutation.mutate({ file, metadata: data }, { onSuccess, onError });
+                        } else {
+                            createMutation.mutate(data, { onSuccess, onError });
+                        }
                     }}
-                    isPending={createMutation.isPending}
+                    isPending={createMutation.isPending || uploadMutation.isPending}
                 />
             )}
         </div>
     );
 }
+
+const ACCEPTED_FORMATS = ".pdf,.epub,.txt,.html,.htm";
+const FORMAT_EXTENSIONS: Record<string, string> = {
+    pdf: 'PDF',
+    epub: 'EPUB',
+    txt: 'TXT',
+    html: 'HTML',
+    htm: 'HTML',
+};
 
 function CreateLivreModal({
     onClose,
@@ -204,7 +218,7 @@ function CreateLivreModal({
     isPending,
 }: {
     onClose: () => void;
-    onCreate: (data: { titre: string; auteur: string; categorie: string; editeur?: string; anneePublication?: number; isbn?: string; resume?: string }) => void;
+    onCreate: (data: { titre: string; auteur: string; categorie: string; editeur?: string; anneePublication?: number; isbn?: string; resume?: string }, file?: File) => void;
     isPending: boolean;
 }) {
     const [titre, setTitre] = useState("");
@@ -214,6 +228,28 @@ function CreateLivreModal({
     const [anneePublication, setAnneePublication] = useState("");
     const [isbn, setIsbn] = useState("");
     const [resume, setResume] = useState("");
+    const [file, setFile] = useState<File | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const detectedFormat = file
+        ? FORMAT_EXTENSIONS[file.name.split('.').pop()?.toLowerCase() || ''] || null
+        : null;
+
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const selected = e.target.files?.[0] || null;
+        setFile(selected);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        const dropped = e.dataTransfer.files?.[0];
+        if (dropped) {
+            const ext = dropped.name.split('.').pop()?.toLowerCase() || '';
+            if (['pdf', 'epub', 'txt', 'html', 'htm'].includes(ext)) {
+                setFile(dropped);
+            }
+        }
+    };
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -226,7 +262,7 @@ function CreateLivreModal({
             anneePublication: anneePublication ? parseInt(anneePublication, 10) : undefined,
             isbn: isbn.trim() || undefined,
             resume: resume.trim() || undefined,
-        });
+        }, file || undefined);
     };
 
     return (
@@ -239,6 +275,53 @@ function CreateLivreModal({
                     </button>
                 </div>
                 <form onSubmit={handleSubmit} className="p-4 space-y-4">
+                    {/* File upload zone */}
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Fichier (optionnel)</label>
+                        <div
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={handleDrop}
+                            onClick={() => fileInputRef.current?.click()}
+                            className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/30 transition-colors"
+                        >
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept={ACCEPTED_FORMATS}
+                                onChange={handleFileChange}
+                                className="hidden"
+                            />
+                            {file ? (
+                                <div className="flex items-center justify-center gap-2">
+                                    <FileText className="h-5 w-5 text-primary" />
+                                    <span className="text-sm font-medium">{file.name}</span>
+                                    {detectedFormat && (
+                                        <span className="text-xs px-2 py-0.5 bg-primary/10 text-primary rounded-full">
+                                            {detectedFormat}
+                                        </span>
+                                    )}
+                                    <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); setFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}
+                                        className="p-0.5 hover:bg-muted rounded"
+                                    >
+                                        <X className="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-1">
+                                    <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
+                                    <p className="text-sm text-muted-foreground">
+                                        Glissez un fichier ou cliquez pour parcourir
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                        PDF, EPUB, TXT, HTML
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
                     <div>
                         <label className="block text-sm font-medium mb-1">Titre *</label>
                         <input
@@ -314,7 +397,7 @@ function CreateLivreModal({
                         <Button type="button" variant="outline" onClick={onClose}>Annuler</Button>
                         <Button type="submit" disabled={isPending || !titre.trim() || !auteur.trim()}>
                             {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                            Creer
+                            {file ? 'Charger et creer' : 'Creer'}
                         </Button>
                     </div>
                 </form>

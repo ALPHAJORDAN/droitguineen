@@ -20,6 +20,8 @@ export interface CreateLivreData {
   categorie: CategorieLivre;
   couverture?: string | null;
   fichierPdf?: string | null;
+  fichierOriginal?: string | null;
+  formatOriginal?: string | null;
   chapitres?: Array<{
     titre: string;
     contenu: string;
@@ -41,6 +43,8 @@ class LivreRepository {
     categorie: true,
     couverture: true,
     fichierPdf: true,
+    fichierOriginal: true,
+    formatOriginal: true,
     createdAt: true,
   };
 

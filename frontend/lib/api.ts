@@ -844,6 +844,8 @@ export interface Livre {
     categorie: string;
     couverture?: string;
     fichierPdf?: string;
+    fichierOriginal?: string;
+    formatOriginal?: string;
     chapitres?: Chapitre[];
     createdAt: string;
     updatedAt: string;
@@ -939,3 +941,45 @@ export async function deleteLivre(id: string): Promise<void> {
 export function getLivreExportPdfUrl(livreId: string): string {
     return `${API_BASE_URL}/export/livre/pdf/${livreId}`;
 }
+
+export function getLivreDownloadUrl(livreId: string): string {
+    return `${API_BASE_URL}/export/livre/download/${livreId}`;
+}
+
+export async function uploadLivre(file: File, metadata: {
+    titre: string;
+    auteur: string;
+    categorie: string;
+    editeur?: string;
+    anneePublication?: number;
+    isbn?: string;
+    resume?: string;
+}): Promise<Livre> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('titre', metadata.titre);
+    formData.append('auteur', metadata.auteur);
+    formData.append('categorie', metadata.categorie);
+    if (metadata.editeur) formData.append('editeur', metadata.editeur);
+    if (metadata.anneePublication) formData.append('anneePublication', metadata.anneePublication.toString());
+    if (metadata.isbn) formData.append('isbn', metadata.isbn);
+    if (metadata.resume) formData.append('resume', metadata.resume);
+
+    const res = await authFetch(`${API_BASE_URL}/livres/upload`, {
+        method: 'POST',
+        body: formData,
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erreur lors de l\'upload du livre');
+    }
+    const json = await res.json();
+    return json.data;
+}
+
+export const FORMAT_LABELS: Record<string, string> = {
+    pdf: 'PDF',
+    epub: 'EPUB',
+    txt: 'TXT',
+    html: 'HTML',
+};

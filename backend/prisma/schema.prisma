@@ -247,6 +247,8 @@ model Livre {
   categorie        CategorieLivre
   couverture       String?         // Chemin image de couverture
   fichierPdf       String?         // Chemin PDF original
+  fichierOriginal  String?         // Chemin du fichier uploade (tout format)
+  formatOriginal   String?         // "pdf", "epub", "txt", "html"
 
   chapitres        Chapitre[]
 

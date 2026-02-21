@@ -2,9 +2,12 @@ import { Router, Request, Response } from 'express';
 import { validate, validateId } from '../middlewares/validation.middleware';
 import { authenticate, authorize } from '../middlewares/auth.middleware';
 import { createLivreSchema, updateLivreSchema, queryLivreSchema } from '../validators/livre.validator';
-import { asyncHandler } from '../middlewares/error.middleware';
+import { asyncHandler, AppError } from '../middlewares/error.middleware';
 import { livreService } from '../services/livre.service';
 import { CategorieLivre } from '@prisma/client';
+import { livreUploadMiddleware, cleanupOnError } from '../middlewares/upload.middleware';
+import { extractChaptersFromFile, detectFormat } from '../services/livre-extract.service';
+import { log } from '../utils/logger';
 
 const router = Router();
 
@@ -32,6 +35,53 @@ router.get('/', validate(queryLivreSchema, 'query'), asyncHandler(async (req: Re
 router.get('/:id', validateId(), asyncHandler(async (req: Request, res: Response) => {
     const livre = await livreService.findById(req.params.id);
     res.json({ success: true, data: livre });
+}));
+
+// POST /livres/upload - Upload fichier + créer livre (ADMIN/EDITOR)
+router.post('/upload', authenticate, authorize('ADMIN', 'EDITOR'), livreUploadMiddleware.single('file'), asyncHandler(async (req: Request, res: Response) => {
+    if (!req.file) {
+        throw new AppError(400, 'Aucun fichier fourni');
+    }
+
+    const { titre, auteur, categorie, editeur, anneePublication, isbn, resume } = req.body;
+
+    if (!titre?.trim() || !auteur?.trim() || !categorie?.trim()) {
+        cleanupOnError(req.file.path);
+        throw new AppError(400, 'Titre, auteur et catégorie sont obligatoires');
+    }
+
+    // Validate categorie
+    const validCategories = Object.values(CategorieLivre);
+    if (!validCategories.includes(categorie as CategorieLivre)) {
+        cleanupOnError(req.file.path);
+        throw new AppError(400, `Catégorie invalide. Valeurs acceptées : ${validCategories.join(', ')}`);
+    }
+
+    try {
+        const format = detectFormat(req.file.originalname);
+        const { chapitres, metadata } = await extractChaptersFromFile(req.file.path, format);
+
+        log.info('Livre file extracted', { format, chapitresCount: chapitres.length, originalName: req.file.originalname });
+
+        const livre = await livreService.create({
+            titre: titre.trim(),
+            auteur: auteur.trim(),
+            categorie: categorie as CategorieLivre,
+            editeur: editeur?.trim() || undefined,
+            anneePublication: anneePublication ? parseInt(anneePublication, 10) : undefined,
+            isbn: isbn?.trim() || undefined,
+            resume: resume?.trim() || undefined,
+            fichierOriginal: req.file.path,
+            formatOriginal: format,
+            fichierPdf: format === 'pdf' ? req.file.path : undefined,
+            chapitres,
+        });
+
+        res.status(201).json({ success: true, data: livre });
+    } catch (error) {
+        cleanupOnError(req.file.path);
+        throw error;
+    }
 }));
 
 // POST /livres - Créer (ADMIN/EDITOR)

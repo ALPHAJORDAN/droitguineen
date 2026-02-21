@@ -4,7 +4,7 @@ import { Header } from "@/components/ui/Header";
 import { Footer } from "@/components/ui/Footer";
 import { Button } from "@/components/ui/Button";
 import { useLivre } from "@/lib/hooks";
-import { CATEGORIE_LIVRE_LABELS, Article, getLivreExportPdfUrl } from "@/lib/api";
+import { CATEGORIE_LIVRE_LABELS, Article, getLivreExportPdfUrl, getLivreDownloadUrl, FORMAT_LABELS } from "@/lib/api";
 import {
     ChevronRight, BookOpen, AlertCircle, ArrowLeft,
     Loader2, Type, User, Calendar, Hash, Download, Share2,
@@ -160,10 +160,11 @@ export function LivreDetailsClient({ id }: { id: string }) {
                         {/* Action bar */}
                         <div className="flex flex-wrap items-center justify-between gap-3 mt-6 pt-5 border-t border-border/50">
                             <div className="flex items-center gap-2">
-                                {livre.fichierPdf && (
-                                    <a href={getLivreExportPdfUrl(livre.id)} target="_blank" rel="noopener noreferrer">
+                                {(livre.fichierOriginal || livre.fichierPdf) && (
+                                    <a href={livre.fichierOriginal ? getLivreDownloadUrl(livre.id) : getLivreExportPdfUrl(livre.id)} target="_blank" rel="noopener noreferrer">
                                         <Button variant="outline" size="sm">
-                                            <Download className="mr-2 h-4 w-4" /> Telecharger PDF
+                                            <Download className="mr-2 h-4 w-4" />
+                                            Telecharger {livre.formatOriginal ? (FORMAT_LABELS[livre.formatOriginal] || livre.formatOriginal.toUpperCase()) : 'PDF'}
                                         </Button>
                                     </a>
                                 )}
@@ -217,10 +218,11 @@ export function LivreDetailsClient({ id }: { id: string }) {
                                 <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-50" />
                                 <p>Aucun chapitre disponible pour ce livre.</p>
                                 <p className="text-sm mt-1">Le contenu n&apos;a peut-etre pas encore ete extrait.</p>
-                                {livre.fichierPdf && (
-                                    <a href={getLivreExportPdfUrl(livre.id)} target="_blank" rel="noopener noreferrer">
+                                {(livre.fichierOriginal || livre.fichierPdf) && (
+                                    <a href={livre.fichierOriginal ? getLivreDownloadUrl(livre.id) : getLivreExportPdfUrl(livre.id)} target="_blank" rel="noopener noreferrer">
                                         <Button variant="outline" className="mt-4 gap-2">
-                                            <Download className="h-4 w-4" /> Telecharger le PDF
+                                            <Download className="h-4 w-4" />
+                                            Telecharger le fichier {livre.formatOriginal ? (FORMAT_LABELS[livre.formatOriginal] || '') : ''}
                                         </Button>
                                     </a>
                                 )}

@@ -30,6 +30,7 @@ import {
     createLivre,
     updateLivre,
     deleteLivre,
+    uploadLivre,
     Texte,
     Livre,
     StatsResponse,
@@ -421,6 +422,20 @@ export function useDeleteLivre() {
     const queryClient = useQueryClient();
     return useMutation({
         mutationFn: deleteLivre,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.livres.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.livreStats });
+        },
+    });
+}
+
+export function useUploadLivre() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: ({ file, metadata }: {
+            file: File;
+            metadata: Parameters<typeof uploadLivre>[1];
+        }) => uploadLivre(file, metadata),
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.livres.all });
             queryClient.invalidateQueries({ queryKey: queryKeys.livreStats });
