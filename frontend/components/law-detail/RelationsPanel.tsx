@@ -53,13 +53,13 @@ export function RelationsPanel({ relationsData }: RelationsPanelProps) {
                                 .filter(rt => rt.dir === "source")
                                 .flatMap(rt => {
                                     const rels = relationsData.relations[rt.key as keyof typeof relationsData.relations];
-                                    return rels.map(rel => (
+                                    return rels.filter(rel => rel.texteCible?.id).map(rel => (
                                         <li key={`${rt.key}-${rel.id}`} className="px-4 py-3 flex items-start gap-2 text-sm hover:bg-muted/30 transition-colors">
                                             <span className={cn("font-medium flex-shrink-0 mt-0.5", rt.color)}>
                                                 {rt.label}
                                             </span>
-                                            <Link href={`/lois/${rel.texteCible?.id}`} className="text-primary hover:underline line-clamp-2">
-                                                {rel.texteCible?.titre}
+                                            <Link href={`/lois/${rel.texteCible!.id}`} className="text-primary hover:underline line-clamp-2">
+                                                {rel.texteCible!.titre}
                                             </Link>
                                         </li>
                                     ));
@@ -78,13 +78,13 @@ export function RelationsPanel({ relationsData }: RelationsPanelProps) {
                                 .filter(rt => rt.dir === "cible")
                                 .flatMap(rt => {
                                     const rels = relationsData.relations[rt.key as keyof typeof relationsData.relations];
-                                    return rels.map(rel => (
+                                    return rels.filter(rel => rel.texteSource?.id).map(rel => (
                                         <li key={`${rt.key}-${rel.id}`} className="px-4 py-3 flex items-start gap-2 text-sm hover:bg-muted/30 transition-colors">
                                             <span className={cn("font-medium flex-shrink-0 mt-0.5", rt.color)}>
                                                 {rt.label}
                                             </span>
-                                            <Link href={`/lois/${rel.texteSource?.id}`} className="text-primary hover:underline line-clamp-2">
-                                                {rel.texteSource?.titre}
+                                            <Link href={`/lois/${rel.texteSource!.id}`} className="text-primary hover:underline line-clamp-2">
+                                                {rel.texteSource!.titre}
                                             </Link>
                                         </li>
                                     ));

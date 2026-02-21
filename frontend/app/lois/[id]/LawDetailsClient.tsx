@@ -145,8 +145,13 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
         };
     }, [articleParam, texte?.articles]);
 
+    const [exportError, setExportError] = useState(false);
+
     const handleExport = (format: 'pdf' | 'docx' | 'json' | 'html') => {
-        exportMutation.mutate({ texteId: id, format });
+        setExportError(false);
+        exportMutation.mutate({ texteId: id, format }, {
+            onError: () => setExportError(true),
+        });
         setShowExportMenu(false);
     };
 
@@ -372,6 +377,9 @@ export function LawDetailsClient({ id, initialData }: { id: string; initialData?
                                         </div>
                                     )}
                                 </div>
+                                {exportError && (
+                                    <span className="text-xs text-destructive">Échec de l&apos;export</span>
+                                )}
                                 <Button variant="outline" size="sm" onClick={() => window.print()}>
                                     <Printer className="mr-2 h-4 w-4" /> Imprimer
                                 </Button>
