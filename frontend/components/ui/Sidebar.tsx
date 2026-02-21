@@ -90,6 +90,7 @@ const menuItems: MenuItem[] = [
             { title: "Jurisprudence CCJA", href: "/recherche?type=Jurisprudence CCJA" },
             { title: "Traités OHADA", href: "/recherche?type=Traites OHADA" },
             { title: "Règlements OHADA", href: "/recherche?type=Reglements OHADA" },
+            { title: "Creation d'entreprise", href: "/creation-entreprise" },
         ],
     },
     {

@@ -8,7 +8,7 @@ import { useLois } from "@/lib/hooks";
 import { Texte } from "@/lib/api";
 import Link from "next/link";
 import {
-    Scale, Gavel, ScrollText, FileCheck, ArrowRight, BookOpen,
+    Scale, Gavel, ScrollText, FileCheck, ArrowRight, BookOpen, Briefcase,
 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 
@@ -102,6 +102,27 @@ export default function OhadaPage() {
                                 </Link>
                             ))}
                         </div>
+                    </div>
+                </section>
+
+                {/* CTA Creation d'entreprise */}
+                <section className="w-full py-8 bg-primary/5 border-t">
+                    <div className="container px-4 md:px-6">
+                        <Link
+                            href="/creation-entreprise"
+                            className="group flex flex-col sm:flex-row items-center gap-5 p-6 border rounded-2xl hover:shadow-lg transition-all duration-300 bg-card"
+                        >
+                            <div className="p-4 bg-primary/10 rounded-2xl text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300 flex-shrink-0">
+                                <Briefcase className="h-8 w-8" />
+                            </div>
+                            <div className="text-center sm:text-left flex-1">
+                                <h3 className="text-lg font-bold mb-1">Creer une entreprise</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Guide pratique : formes juridiques, demarches administratives et textes de reference OHADA
+                                </p>
+                            </div>
+                            <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
+                        </Link>
                     </div>
                 </section>
 

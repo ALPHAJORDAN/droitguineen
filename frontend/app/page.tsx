@@ -296,8 +296,29 @@ function HomeContent() {
                     </div>
                 </section>
 
-                {/* CTA Section */}
+                {/* Creation d'entreprise CTA */}
                 <section className="w-full py-12 bg-primary/5 border-t">
+                    <div className="container px-4 md:px-6">
+                        <Link
+                            href="/creation-entreprise"
+                            className="group flex flex-col sm:flex-row items-center gap-5 p-6 border rounded-2xl hover:shadow-lg transition-all duration-300 bg-card"
+                        >
+                            <div className="p-4 bg-primary/10 rounded-2xl text-primary group-hover:bg-primary group-hover:text-primary-foreground transition-colors duration-300 flex-shrink-0">
+                                <Compass className="h-8 w-8" />
+                            </div>
+                            <div className="text-center sm:text-left flex-1">
+                                <h3 className="text-lg font-bold mb-1">Creer une entreprise en Guinee</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Guide pratique : formes juridiques, demarches, organismes et textes OHADA de reference
+                                </p>
+                            </div>
+                            <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0 hidden sm:block" />
+                        </Link>
+                    </div>
+                </section>
+
+                {/* CTA Section */}
+                <section className="w-full py-12 bg-background border-t">
                     <div className="container px-4 md:px-6">
                         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div>
