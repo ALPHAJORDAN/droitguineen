@@ -75,8 +75,11 @@ export async function verifyPdfSignature(
   try {
     const fd = await fs.promises.open(req.file.path, 'r');
     const buffer = Buffer.alloc(5);
-    await fd.read(buffer, 0, 5, 0);
-    await fd.close();
+    try {
+      await fd.read(buffer, 0, 5, 0);
+    } finally {
+      await fd.close();
+    }
 
     if (!buffer.equals(PDF_SIGNATURE)) {
       // Delete the invalid file
