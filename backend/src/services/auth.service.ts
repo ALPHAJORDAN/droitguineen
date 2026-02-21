@@ -91,7 +91,7 @@ class AuthService {
       throw new AppError(401, 'Refresh token expiré');
     }
 
-    if (!storedToken.user.isActive) {
+    if (!storedToken.user || !storedToken.user.isActive) {
       throw new AppError(403, 'Compte désactivé');
     }
 

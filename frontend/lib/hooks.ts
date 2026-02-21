@@ -192,6 +192,7 @@ export function useUploadPdf() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.files.all });
             queryClient.invalidateQueries({ queryKey: queryKeys.lois.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.stats });
         },
     });
 }
@@ -216,6 +217,7 @@ export function useConfirmUpload() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.files.all });
             queryClient.invalidateQueries({ queryKey: queryKeys.lois.all });
+            queryClient.invalidateQueries({ queryKey: queryKeys.stats });
         },
     });
 }

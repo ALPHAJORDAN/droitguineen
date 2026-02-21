@@ -27,6 +27,8 @@ export interface CreateLivreData {
   }>;
 }
 
+const ALLOWED_SORT_FIELDS = new Set(['anneePublication', 'createdAt', 'titre', 'auteur']);
+
 class LivreRepository {
   private readonly selectList = {
     id: true,
@@ -55,12 +57,14 @@ class LivreRepository {
       where.auteur = { contains: options.auteur, mode: 'insensitive' };
     }
 
+    const sortField = ALLOWED_SORT_FIELDS.has(options.sort) ? options.sort : 'createdAt';
+
     const [livres, total] = await Promise.all([
       prisma.livre.findMany({
         where,
         skip,
         take: options.limit,
-        orderBy: { [options.sort]: options.order },
+        orderBy: { [sortField]: options.order },
         select: this.selectList,
       }),
       prisma.livre.count({ where }),

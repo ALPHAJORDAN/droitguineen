@@ -91,11 +91,10 @@ async function authFetch(url: string, options: RequestInit = {}): Promise<Respon
             isRefreshing = true;
             refreshPromise = tryRefreshToken().finally(() => {
                 isRefreshing = false;
-                refreshPromise = null;
             });
         }
 
-        const newToken = await (refreshPromise || tryRefreshToken());
+        const newToken = await refreshPromise;
         if (newToken) {
             headers.set('Authorization', `Bearer ${newToken}`);
             res = await fetch(url, { ...options, headers });

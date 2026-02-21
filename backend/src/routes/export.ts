@@ -432,7 +432,9 @@ router.get('/livre/pdf/:id', validateId(), asyncHandler(async (req: Request, res
 
     const path = require('path');
     const fs = require('fs');
+    const { validateUploadPath } = require('../utils/sanitizer');
     const filePath = path.resolve(livre.fichierPdf);
+    validateUploadPath(filePath);
     if (!fs.existsSync(filePath)) {
         throw new AppError(404, 'Fichier PDF introuvable sur le serveur');
     }
