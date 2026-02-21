@@ -7,6 +7,7 @@ import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 import { Nature } from '@prisma/client';
 import { log } from '../utils/logger';
+import { preprocessPdfPages } from './image-preprocessor';
 
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require('pdf-parse-fork');
@@ -151,6 +152,9 @@ export async function extractTextFromPdf(filePath: string): Promise<OCRResult> {
                     }
                 });
                 log.info('PDF pages converted', { count: pageImages.length });
+
+                // Preprocess images for better OCR on old/scanned documents
+                pageImages = await preprocessPdfPages(pageImages);
             } catch (imageError) {
                 log.warn('PDF to image conversion failed, will try direct PDF processing', {
                     error: (imageError as Error).message
