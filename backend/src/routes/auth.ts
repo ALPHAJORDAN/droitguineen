@@ -10,11 +10,16 @@ import {
   updateUserSchema,
   changePasswordSchema,
 } from '../validators/auth.validator';
+import {
+  googleLoginSchema,
+  createInvitationSchema,
+} from '../validators/invitation.validator';
 
 const router = Router();
 
 // Routes publiques
 router.post('/login', validate(loginSchema, 'body'), authController.login);
+router.post('/google', validate(googleLoginSchema, 'body'), authController.googleLogin);
 router.post('/refresh', validate(refreshTokenSchema, 'body'), authController.refreshToken);
 
 // Routes authentifiées
@@ -27,5 +32,10 @@ router.post('/users', authenticate, authorize('ADMIN'), validate(createUserSchem
 router.get('/users', authenticate, authorize('ADMIN'), authController.getAllUsers);
 router.put('/users/:id', authenticate, authorize('ADMIN'), validateId(), validate(updateUserSchema, 'body'), authController.updateUser);
 router.delete('/users/:id', authenticate, authorize('ADMIN'), validateId(), authController.deleteUser);
+
+// Routes admin (invitations)
+router.post('/invitations', authenticate, authorize('ADMIN'), validate(createInvitationSchema, 'body'), authController.createInvitation);
+router.get('/invitations', authenticate, authorize('ADMIN'), authController.listInvitations);
+router.delete('/invitations/:id', authenticate, authorize('ADMIN'), validateId(), authController.revokeInvitation);
 
 export default router;

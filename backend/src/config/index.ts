@@ -41,6 +41,11 @@ export const config = {
     expiresIn: process.env.JWT_EXPIRES_IN || '24h',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
   },
+
+  // Google OAuth
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || '',
+  },
 } as const;
 
 // Fail fast if JWT_SECRET is not set in production

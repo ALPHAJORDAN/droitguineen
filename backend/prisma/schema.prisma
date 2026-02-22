@@ -285,16 +285,43 @@ enum UserRole {
   USER
 }
 
+enum Profession {
+  MAGISTRAT
+  AVOCAT
+  JURISTE
+  NOTAIRE
+  EXPERT
+  AUTRE
+}
+
+enum AuthProvider {
+  LOCAL
+  GOOGLE
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+}
+
 model User {
   id            String         @id @default(uuid())
   email         String         @unique
-  password      String         // Hash bcrypt
+  password      String?        // Hash bcrypt (nullable pour les utilisateurs Google)
   nom           String
   prenom        String
   role          UserRole       @default(USER)
+  profession    Profession?
   isActive      Boolean        @default(true)
 
+  // OAuth
+  authProvider  AuthProvider   @default(LOCAL)
+  googleId      String?        @unique
+  avatarUrl     String?
+
   refreshTokens RefreshToken[]
+  invitations   Invitation[]   @relation("InvitedBy")
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -314,6 +341,25 @@ model RefreshToken {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+model Invitation {
+  id          String           @id @default(uuid())
+  email       String
+  role        UserRole         @default(USER)
+  profession  Profession
+  status      InvitationStatus @default(PENDING)
+
+  invitedById String
+  invitedBy   User             @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  acceptedAt  DateTime?
+
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([email])
+  @@index([status])
 }
 
 

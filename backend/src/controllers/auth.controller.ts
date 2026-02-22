@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { asyncHandler } from '../middlewares/error.middleware';
 import { AuthRequest } from '../middlewares/auth.middleware';
 import { authService } from '../services/auth.service';
+import { googleAuthService } from '../services/google-auth.service';
+import { invitationService } from '../services/invitation.service';
 
 class AuthController {
   login = asyncHandler(async (req: Request, res: Response) => {
@@ -92,6 +94,49 @@ class AuthController {
     res.json({
       success: true,
       message: 'Mot de passe modifié avec succès',
+    });
+  });
+
+  // Google OAuth
+  googleLogin = asyncHandler(async (req: Request, res: Response) => {
+    const { credential } = req.body;
+    const result = await googleAuthService.loginWithGoogle(credential);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  });
+
+  // Invitations
+  createInvitation = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = (req as AuthRequest).user;
+    const invitation = await invitationService.createInvitation(req.body, id);
+
+    res.status(201).json({
+      success: true,
+      data: invitation,
+    });
+  });
+
+  listInvitations = asyncHandler(async (req: Request, res: Response) => {
+    const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+    const limit = Math.min(Math.max(1, parseInt(req.query.limit as string, 10) || 20), 100);
+    const result = await invitationService.listInvitations(page, limit);
+
+    res.json({
+      success: true,
+      ...result,
+    });
+  });
+
+  revokeInvitation = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params;
+    await invitationService.revokeInvitation(id);
+
+    res.json({
+      success: true,
+      message: 'Invitation révoquée',
     });
   });
 }

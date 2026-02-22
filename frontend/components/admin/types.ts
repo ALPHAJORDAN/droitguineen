@@ -1,6 +1,6 @@
 import { HIERARCHIE_JURIDIQUE } from "./constants";
 
-export type AdminTab = "dashboard" | "documents" | "livres" | "users";
+export type AdminTab = "dashboard" | "documents" | "livres" | "users" | "invitations";
 
 export interface UploadFormState {
     // Step 1: Classification

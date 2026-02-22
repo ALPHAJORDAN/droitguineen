@@ -7,7 +7,11 @@ const userSelect = {
   nom: true,
   prenom: true,
   role: true,
+  profession: true,
   isActive: true,
+  authProvider: true,
+  googleId: true,
+  avatarUrl: true,
   createdAt: true,
   updatedAt: true,
 } satisfies Prisma.UserSelect;
@@ -29,6 +33,13 @@ class UserRepository {
   async findById(id: string) {
     return prisma.user.findUnique({
       where: { id },
+      select: userSelect,
+    });
+  }
+
+  async findByGoogleId(googleId: string) {
+    return prisma.user.findUnique({
+      where: { googleId },
       select: userSelect,
     });
   }

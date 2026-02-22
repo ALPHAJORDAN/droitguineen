@@ -8,7 +8,11 @@ export interface User {
     nom: string;
     prenom: string;
     role: 'ADMIN' | 'EDITOR' | 'USER';
+    profession?: string;
     isActive: boolean;
+    authProvider: 'LOCAL' | 'GOOGLE';
+    googleId?: string;
+    avatarUrl?: string;
     createdAt: string;
     updatedAt: string;
 }
@@ -134,6 +138,78 @@ export async function getMeApi(): Promise<User> {
     const response = await res.json();
     return response.data;
 }
+
+export async function googleLoginApi(credential: string): Promise<LoginResponse> {
+    const res = await fetch(`${API_BASE_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ credential }),
+    });
+    if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Échec de la connexion Google');
+    }
+    const response = await res.json();
+    return response.data;
+}
+
+// ============ Invitation Types & API ============
+
+export interface Invitation {
+    id: string;
+    email: string;
+    role: 'ADMIN' | 'EDITOR' | 'USER';
+    profession: string;
+    status: 'PENDING' | 'ACCEPTED' | 'REVOKED';
+    invitedBy: { nom: string; prenom: string };
+    acceptedAt?: string;
+    createdAt: string;
+}
+
+export async function createInvitation(data: {
+    email: string;
+    role: string;
+    profession: string;
+}): Promise<Invitation> {
+    const res = await authFetch(`${API_BASE_URL}/auth/invitations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erreur lors de la création de l\'invitation');
+    }
+    const response = await res.json();
+    return response.data;
+}
+
+export async function getInvitations(page = 1, limit = 20): Promise<PaginatedResponse<Invitation>> {
+    const params = new URLSearchParams({ page: page.toString(), limit: limit.toString() });
+    const res = await authFetch(`${API_BASE_URL}/auth/invitations?${params.toString()}`);
+    if (!res.ok) throw new Error('Erreur lors du chargement des invitations');
+    const response = await res.json();
+    return { data: response.data, pagination: response.pagination };
+}
+
+export async function revokeInvitation(id: string): Promise<void> {
+    const res = await authFetch(`${API_BASE_URL}/auth/invitations/${id}`, {
+        method: 'DELETE',
+    });
+    if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Erreur lors de la révocation');
+    }
+}
+
+export const PROFESSION_LABELS: Record<string, string> = {
+    MAGISTRAT: 'Magistrat',
+    AVOCAT: 'Avocat',
+    JURISTE: 'Juriste',
+    NOTAIRE: 'Notaire',
+    EXPERT: 'Expert',
+    AUTRE: 'Autre',
+};
 
 // ============ Domain Types ============
 

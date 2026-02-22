@@ -11,9 +11,10 @@ import { DashboardTab } from "@/components/admin/DashboardTab";
 import { DocumentsTab } from "@/components/admin/DocumentsTab";
 import { LivresTab } from "@/components/admin/LivresTab";
 import { UsersTab } from "@/components/admin/UsersTab";
+import { InvitationsTab } from "@/components/admin/InvitationsTab";
 import type { AdminTab } from "@/components/admin/types";
 import {
-    Loader2, ShieldAlert, LayoutDashboard, FileText, Users, BookOpen,
+    Loader2, ShieldAlert, LayoutDashboard, FileText, Users, BookOpen, UserPlus,
 } from "lucide-react";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
@@ -36,6 +37,7 @@ const TABS: { id: AdminTab; label: string; icon: typeof LayoutDashboard; adminOn
     { id: "documents", label: "Documents", icon: FileText },
     { id: "livres", label: "Bibliotheque", icon: BookOpen },
     { id: "users", label: "Utilisateurs", icon: Users, adminOnly: true },
+    { id: "invitations", label: "Invitations", icon: UserPlus, adminOnly: true },
 ];
 
 function AdminPageContent() {
@@ -118,6 +120,7 @@ function AdminPageContent() {
                         {activeTab === "documents" && <DocumentsTab />}
                         {activeTab === "livres" && <LivresTab />}
                         {activeTab === "users" && <UsersTab />}
+                        {activeTab === "invitations" && <InvitationsTab />}
                     </ErrorBoundary>
                 </main>
             </ToastProvider>

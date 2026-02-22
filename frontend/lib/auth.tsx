@@ -2,13 +2,14 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { User, loginApi, logoutApi, getMeApi, storeTokens, clearTokens, getStoredAccessToken } from "./api";
+import { User, loginApi, googleLoginApi, logoutApi, getMeApi, storeTokens, clearTokens, getStoredAccessToken } from "./api";
 
 interface AuthContextType {
     user: User | null;
     isAuthenticated: boolean;
     isLoading: boolean;
     login: (email: string, password: string) => Promise<void>;
+    googleLogin: (credential: string) => Promise<void>;
     logout: () => Promise<void>;
 }
 
@@ -40,6 +41,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(response.user);
     }, []);
 
+    const googleLogin = useCallback(async (credential: string) => {
+        const response = await googleLoginApi(credential);
+        storeTokens(response.accessToken, response.refreshToken);
+        setUser(response.user);
+    }, []);
+
     const logout = useCallback(async () => {
         try {
             await logoutApi();
@@ -56,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 isAuthenticated: !!user,
                 isLoading,
                 login,
+                googleLogin,
                 logout,
             }}
         >

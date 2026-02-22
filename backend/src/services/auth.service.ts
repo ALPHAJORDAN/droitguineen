@@ -40,7 +40,7 @@ class AuthService {
   async login(email: string, password: string) {
     const user = await userRepository.findByEmail(email);
 
-    if (!user) {
+    if (!user || !user.password) {
       // Constant-time: run bcrypt even if user not found to prevent timing-based enumeration
       await bcrypt.hash(password, BCRYPT_ROUNDS);
       throw new AppError(401, 'Email ou mot de passe incorrect');
@@ -55,6 +55,13 @@ class AuthService {
       throw new AppError(401, 'Email ou mot de passe incorrect');
     }
 
+    return this.issueTokensForUser(user);
+  }
+
+  /**
+   * Issue JWT access + refresh tokens for a user (used by both local and Google auth).
+   */
+  async issueTokensForUser(user: { id: string; email: string; role: UserRole; password?: string | null; [key: string]: unknown }) {
     const tokenPayload: JwtPayload = {
       id: user.id,
       email: user.email,
@@ -166,6 +173,10 @@ class AuthService {
     const user = await userRepository.findByIdWithPassword(userId);
     if (!user) {
       throw new AppError(404, 'Utilisateur non trouvé');
+    }
+
+    if (!user.password) {
+      throw new AppError(400, 'Ce compte utilise Google pour se connecter');
     }
 
     const isOldPasswordValid = await bcrypt.compare(data.oldPassword, user.password);

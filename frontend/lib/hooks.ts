@@ -31,6 +31,10 @@ import {
     updateLivre,
     deleteLivre,
     uploadLivre,
+    getInvitations,
+    createInvitation,
+    revokeInvitation,
+    Invitation,
     Texte,
     Livre,
     StatsResponse,
@@ -425,6 +429,40 @@ export function useDeleteLivre() {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: queryKeys.livres.all });
             queryClient.invalidateQueries({ queryKey: queryKeys.livreStats });
+        },
+    });
+}
+
+// ============ Hooks pour les Invitations ============
+
+export const invitationKeys = {
+    all: ['invitations'] as const,
+    list: (page?: number) => [...invitationKeys.all, 'list', page] as const,
+};
+
+export function useInvitations(page = 1) {
+    return useQuery<PaginatedResponse<Invitation>>({
+        queryKey: invitationKeys.list(page),
+        queryFn: () => getInvitations(page),
+    });
+}
+
+export function useCreateInvitation() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: createInvitation,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: invitationKeys.all });
+        },
+    });
+}
+
+export function useRevokeInvitation() {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: revokeInvitation,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: invitationKeys.all });
         },
     });
 }
