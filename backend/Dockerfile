@@ -34,6 +34,9 @@ COPY package*.json ./
 # Generate Prisma client
 RUN npx prisma generate
 
+# Create uploads directory
+RUN mkdir -p /app/uploads
+
 # Set ownership
 RUN chown -R expressjs:nodejs /app
 
