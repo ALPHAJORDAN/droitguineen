@@ -2,6 +2,7 @@ import { Profession, UserRole } from '@prisma/client';
 import { AppError } from '../middlewares/error.middleware';
 import { invitationRepository } from '../repositories/invitation.repository';
 import { userRepository } from '../repositories/user.repository';
+import { sendInvitationEmail } from './email.service';
 
 class InvitationService {
   async createInvitation(data: {
@@ -21,12 +22,17 @@ class InvitationService {
       throw new AppError(409, 'Une invitation est déjà en attente pour cet email');
     }
 
-    return invitationRepository.create({
+    const invitation = await invitationRepository.create({
       email: data.email,
       role: data.role as UserRole,
       profession: data.profession as Profession,
       invitedById,
     });
+
+    // Send invitation email (non-blocking — don't fail if email fails)
+    await sendInvitationEmail(invitation);
+
+    return invitation;
   }
 
   async listInvitations(page: number = 1, limit: number = 20) {

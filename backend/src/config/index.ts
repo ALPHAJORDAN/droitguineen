@@ -46,6 +46,16 @@ export const config = {
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
   },
+
+  // SMTP (Gmail)
+  smtp: {
+    user: process.env.SMTP_USER || '',
+    appPassword: process.env.SMTP_APP_PASSWORD || '',
+    from: process.env.SMTP_FROM || process.env.SMTP_USER || '',
+  },
+
+  // Frontend URL (for email links)
+  frontendUrl: process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:3000',
 } as const;
 
 // Fail fast if JWT_SECRET is not set in production
