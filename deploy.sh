@@ -102,6 +102,7 @@ else
     warn "Cela peut prendre quelques minutes..."
     gcloud sql instances create "${SQL_INSTANCE_NAME}" \
         --database-version=POSTGRES_16 \
+        --edition=ENTERPRISE \
         --tier="${SQL_TIER}" \
         --region="${REGION}" \
         --storage-type=SSD \
@@ -170,9 +171,12 @@ create_or_update_secret "DATABASE_URL" "${DATABASE_URL}"
 create_or_update_secret "JWT_SECRET" "${JWT_SECRET}"
 create_or_update_secret "MEILI_MASTER_KEY" "${MEILI_MASTER_KEY}"
 
-# Google Client ID - prompt user
-echo ""
-read -rp "$(echo -e "${YELLOW}Entrez votre GOOGLE_CLIENT_ID (ou appuyez sur Entree pour ignorer):${NC} ")" GOOGLE_CLIENT_ID
+# Google Client ID - from env var or prompt
+GOOGLE_CLIENT_ID="${GOOGLE_CLIENT_ID:-}"
+if [ -z "${GOOGLE_CLIENT_ID}" ] && [ -t 0 ]; then
+    echo ""
+    read -rp "$(echo -e "${YELLOW}Entrez votre GOOGLE_CLIENT_ID (ou appuyez sur Entree pour ignorer):${NC} ")" GOOGLE_CLIENT_ID
+fi
 if [ -n "${GOOGLE_CLIENT_ID}" ]; then
     create_or_update_secret "GOOGLE_CLIENT_ID" "${GOOGLE_CLIENT_ID}"
 else

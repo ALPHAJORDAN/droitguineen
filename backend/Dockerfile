@@ -3,23 +3,30 @@
 # ==========================================
 
 # Stage 1: Dependencies
-FROM node:20-alpine AS deps
+FROM node:20-alpine3.20 AS deps
 WORKDIR /app
+
+# Install system dependencies for native modules (canvas)
+RUN apk add --no-cache python3 make g++ pkgconf pixman-dev cairo-dev pango-dev libjpeg-turbo-dev giflib-dev
+
 COPY package*.json ./
 RUN npm ci --only=production && \
     cp -R node_modules /prod_modules && \
     npm ci
 
 # Stage 2: Builder
-FROM node:20-alpine AS builder
+FROM node:20-alpine3.20 AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-RUN npm run build
+RUN npx prisma generate && npm run build
 
 # Stage 3: Production
-FROM node:20-alpine AS production
+FROM node:20-alpine3.20 AS production
 WORKDIR /app
+
+# Install runtime dependencies for native modules (canvas)
+RUN apk add --no-cache pixman cairo pango libjpeg-turbo giflib
 
 # Create non-root user for security
 RUN addgroup --system --gid 1001 nodejs && \
@@ -53,11 +60,11 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
 CMD ["node", "dist/index.js"]
 
 # Stage 4: Development
-FROM node:20-alpine AS development
+FROM node:20-alpine3.20 AS development
 WORKDIR /app
 
-# Install system dependencies for native modules
-RUN apk add --no-cache python3 make g++
+# Install system dependencies for native modules (canvas)
+RUN apk add --no-cache python3 make g++ pkgconf pixman-dev cairo-dev pango-dev libjpeg-turbo-dev giflib-dev
 
 COPY package*.json ./
 RUN npm ci
