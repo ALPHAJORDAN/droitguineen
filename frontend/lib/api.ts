@@ -1,4 +1,12 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+// Public URL used by the browser (baked in at build time)
+const PUBLIC_API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+
+// Internal URL for server-side rendering inside Docker (e.g., http://backend:4000)
+// Falls back to the public URL if not set
+const INTERNAL_API_URL = process.env.INTERNAL_API_URL || PUBLIC_API_URL;
+
+// Use internal URL on the server, public URL on the client
+const API_BASE_URL = typeof window === 'undefined' ? INTERNAL_API_URL : PUBLIC_API_URL;
 
 // ============ Auth Types ============
 

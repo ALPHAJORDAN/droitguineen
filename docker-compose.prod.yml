@@ -4,11 +4,26 @@
 # Usage: docker-compose -f docker-compose.prod.yml up -d
 #
 # Prerequisites:
-# 1. Create .env file with production secrets
-# 2. Configure SSL certificates if using HTTPS
-# 3. Set up reverse proxy (nginx/traefik)
+# 1. Copy .env.production.example to .env and fill in values
+# 2. Configure reverse proxy (nginx/traefik) for SSL
+# 3. Run: docker-compose -f docker-compose.prod.yml up -d
 
 services:
+  # ----------------------------------------
+  # Database Migration (runs once then exits)
+  # ----------------------------------------
+  migrate:
+    build:
+      context: ./backend
+      target: production
+    environment:
+      - DATABASE_URL=postgres://${DB_USER:-droitguineen}:${DB_PASSWORD:?DB_PASSWORD required}@postgres:5432/${DB_NAME:-droitdatabase}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: ["npx", "prisma", "db", "push", "--skip-generate", "--accept-data-loss"]
+    restart: "no"
+
   # ----------------------------------------
   # Frontend (Next.js)
   # ----------------------------------------
@@ -17,16 +32,21 @@ services:
       context: ./frontend
       target: production
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://api.droitguineen.gn}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL required (e.g. https://api.example.com)}
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:-}
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     environment:
       - NODE_ENV=production
+      # Internal URL for server-side rendering (Docker DNS)
+      - INTERNAL_API_URL=http://backend:4000
     depends_on:
       backend:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     deploy:
-      replicas: 2
+      replicas: ${FRONTEND_REPLICAS:-1}
       resources:
         limits:
           cpus: '1'
@@ -35,6 +55,12 @@ services:
           cpus: '0.25'
           memory: 256M
     restart: always
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   # ----------------------------------------
   # Backend (Express.js)
@@ -44,14 +70,16 @@ services:
       context: ./backend
       target: production
     ports:
-      - "4000:4000"
+      - "${BACKEND_PORT:-4000}:4000"
     environment:
       - NODE_ENV=production
       - PORT=4000
-      - DATABASE_URL=postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}
+      - DATABASE_URL=postgres://${DB_USER:-droitguineen}:${DB_PASSWORD}@postgres:5432/${DB_NAME:-droitdatabase}
       - SEARCH_URL=http://meili:7700
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
-      - CORS_ORIGIN=${CORS_ORIGIN}
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET required}
+      - CORS_ORIGIN=${CORS_ORIGIN:?CORS_ORIGIN required (e.g. https://example.com)}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_APPLICATION_CREDENTIALS=/app/credentials/google-vision.json
     depends_on:
       postgres:
@@ -62,7 +90,7 @@ services:
       - backend-uploads:/app/uploads
       - ./credentials:/app/credentials:ro
     deploy:
-      replicas: 2
+      replicas: ${BACKEND_REPLICAS:-1}
       resources:
         limits:
           cpus: '2'
@@ -70,6 +98,12 @@ services:
         reservations:
           cpus: '0.5'
           memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:4000/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     restart: always
     logging:
       driver: "json-file"
@@ -83,15 +117,14 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${DB_USER}
+      POSTGRES_USER: ${DB_USER:-droitguineen}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_DB: ${DB_NAME:-droitdatabase}
       PGDATA: /var/lib/postgresql/data/pgdata
     volumes:
       - postgres-data:/var/lib/postgresql/data
-      - ./init-db:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-droitguineen} -d ${DB_NAME:-droitdatabase}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -178,7 +211,7 @@ services:
       - postgres-data:/var/lib/postgresql/data:ro
     entrypoint: |
       /bin/sh -c '
-        pg_dump -h postgres -U ${DB_USER} -d ${DB_NAME} -F c > /backups/backup_$$(date +%Y%m%d_%H%M%S).dump
+        pg_dump -h postgres -U ${DB_USER:-droitguineen} -d ${DB_NAME:-droitdatabase} -F c > /backups/backup_$$(date +%Y%m%d_%H%M%S).dump
       '
     depends_on:
       postgres:

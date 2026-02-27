@@ -45,6 +45,9 @@ USER nextjs
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+# Internal API URL for SSR (set at runtime, not build time)
+# In Docker, the frontend can reach the backend via Docker DNS: http://backend:4000
+ENV INTERNAL_API_URL=""
 
 EXPOSE 3000
 
